@@ -4,7 +4,7 @@ const CONTACT_EMAIL = "balades.culturelles@gmail.com";
 const PUBLIC_TOPIC = "Je souhaite réserver une balade publique";
 const MAX_CAPACITY = 20;
 // URL de la Web App Apps Script (…/exec), pour la version GitHub Pages. Laisser vide avec le serveur Python local.
-const BOOKING_API_URL = "";
+const BOOKING_API_URL = "https://script.google.com/macros/s/AKfycbzo7ZZCjaeM2cOuqeLq08qfhwOBwKuCn2zWvHCXamJhlxy67ZM1or_glOYAkx32BKe4hA/exec";
 const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
 
 const header = document.querySelector("[data-header]");
