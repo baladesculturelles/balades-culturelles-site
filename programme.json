@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "capacity": 20,
+  "prices": {
+    "standard": 15,
+    "youth": 12,
+    "child": 8,
+    "underFive": 0
+  },
+  "sessions": [
+    {
+      "id": "2026-09-12|Le cimetière du Montparnasse|10 h 30–12 h",
+      "date": "2026-09-12",
+      "walk": "Le cimetière du Montparnasse",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-09-13|Le cimetière du Montparnasse|10 h 30–12 h",
+      "date": "2026-09-13",
+      "walk": "Le cimetière du Montparnasse",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-10-03|Art nouveau à Nation|10 h 30–12 h",
+      "date": "2026-10-03",
+      "walk": "Art nouveau à Nation",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-10-04|Art nouveau à Nation|10 h 30–12 h",
+      "date": "2026-10-04",
+      "walk": "Art nouveau à Nation",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-11-14|Le Paris de Molière|10 h 30–12 h",
+      "date": "2026-11-14",
+      "walk": "Le Paris de Molière",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-11-15|Le Paris de Molière|10 h 30–12 h",
+      "date": "2026-11-15",
+      "walk": "Le Paris de Molière",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-11-28|Les grands magasins|10 h 30–12 h",
+      "date": "2026-11-28",
+      "walk": "Les grands magasins",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-11-29|Les grands magasins|10 h 30–12 h",
+      "date": "2026-11-29",
+      "walk": "Les grands magasins",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2026-12-12|Les passages couverts|10 h 30–12 h",
+      "date": "2026-12-12",
+      "walk": "Les passages couverts",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-01-23|Le quartier Montsouris|10 h 30–12 h",
+      "date": "2027-01-23",
+      "walk": "Le quartier Montsouris",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-01-24|Le quartier Montsouris|10 h 30–12 h",
+      "date": "2027-01-24",
+      "walk": "Le quartier Montsouris",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-02-27|Le quartier chinois|10 h 30–12 h",
+      "date": "2027-02-27",
+      "walk": "Le quartier chinois",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-02-28|Le quartier chinois|10 h 30–12 h",
+      "date": "2027-02-28",
+      "walk": "Le quartier chinois",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-03-20|Le cimetière du Père-Lachaise|10 h 30–12 h",
+      "date": "2027-03-20",
+      "walk": "Le cimetière du Père-Lachaise",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-03-21|Le cimetière du Père-Lachaise|10 h 30–12 h",
+      "date": "2027-03-21",
+      "walk": "Le cimetière du Père-Lachaise",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-04-24|Le Paris haussmannien|10 h 30–12 h",
+      "date": "2027-04-24",
+      "walk": "Le Paris haussmannien",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-04-25|Le Paris haussmannien|10 h 30–12 h",
+      "date": "2027-04-25",
+      "walk": "Le Paris haussmannien",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-05-22|La Défense et ses œuvres contemporaines|10 h 30–12 h",
+      "date": "2027-05-22",
+      "walk": "La Défense et ses œuvres contemporaines",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-05-23|La Défense et ses œuvres contemporaines|10 h 30–12 h",
+      "date": "2027-05-23",
+      "walk": "La Défense et ses œuvres contemporaines",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-06-12|L’Inde à Paris|10 h 30–12 h",
+      "date": "2027-06-12",
+      "walk": "L’Inde à Paris",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-06-13|L’Inde à Paris|10 h 30–12 h",
+      "date": "2027-06-13",
+      "walk": "L’Inde à Paris",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-06-26|Champs de Mars et Tour Eiffel|10 h 30–12 h",
+      "date": "2027-06-26",
+      "walk": "Champs de Mars et Tour Eiffel",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-06-27|Champs de Mars et Tour Eiffel|10 h 30–12 h",
+      "date": "2027-06-27",
+      "walk": "Champs de Mars et Tour Eiffel",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-07-10|Sur les traces de l’enceinte de Philippe Auguste|10 h 30–12 h",
+      "date": "2027-07-10",
+      "walk": "Sur les traces de l’enceinte de Philippe Auguste",
+      "slot": "10 h 30–12 h"
+    },
+    {
+      "id": "2027-07-11|Sur les traces de l’enceinte de Philippe Auguste|10 h 30–12 h",
+      "date": "2027-07-11",
+      "walk": "Sur les traces de l’enceinte de Philippe Auguste",
+      "slot": "10 h 30–12 h"
+    }
+  ]
+}

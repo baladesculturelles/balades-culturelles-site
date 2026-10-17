@@ -380,7 +380,7 @@ function updateProgramAvailability() {
     link.setAttribute("aria-disabled", String(!available));
     if (!available) link.tabIndex = -1;
     else link.removeAttribute("tabindex");
-    const dateLabel = link.querySelector("time")?.textContent || date;
+    const dateLabel = link.dataset.fullDate || link.querySelector("time")?.textContent || date;
     link.setAttribute("aria-label", `${walk}, le ${dateLabel} : ${available ? `${pluralPlaces(session.remaining)} restantes sur ${session.capacity}` : "complet"}.`);
   });
 
@@ -419,6 +419,8 @@ async function loadAvailability() {
       const response = await fetch(BOOKING_API_URL ? `${BOOKING_API_URL}?api=availability` : "/api/availability", { cache: "no-store", headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
+      // Apps Script répond toujours 200 : une erreur arrive dans le corps de la réponse.
+      if (payload.error || !Array.isArray(payload.sessions)) throw new Error(payload.message || "Réponse de disponibilités invalide");
       renderAvailability(payload);
     } catch (error) {
       availabilityLoaded = false;
@@ -564,6 +566,8 @@ async function submitPublicBooking(values) {
 
   const name = String(values.get("name") || "").trim();
   const email = String(values.get("email") || "").trim();
+  const phone = String(values.get("phone") || "").trim();
+  const message = String(values.get("message") || "").trim();
   if (!name || !email) return;
 
   if (submitButton) submitButton.disabled = true;
@@ -575,7 +579,7 @@ async function submitPublicBooking(values) {
       headers: BOOKING_API_URL
         ? { "Content-Type": "text/plain;charset=utf-8" }
         : { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ session_id: session.id, name, email, participants, age_groups: ageGroups }),
+      body: JSON.stringify({ session_id: session.id, name, email, phone, message, participants, age_groups: ageGroups }),
     });
     const result = await response.json();
     if (!response.ok || result.error) {
@@ -609,6 +613,7 @@ function submitCustomRequest(values) {
   const participants = String(values.get("custom_participants") || "").trim();
   const slot = String(values.get("slot") || "").trim();
   const message = String(values.get("message") || "").trim();
+  const phone = String(values.get("phone") || "").trim();
   if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > MAX_CAPACITY)) {
     updateFormStatus(`Une visite est limitée à ${MAX_CAPACITY} personnes. Indiquez un nombre inférieur ou égal, ou contactez Marie-Tiyi.`, "error");
     customParticipantsInput?.focus();
@@ -620,6 +625,7 @@ function submitCustomRequest(values) {
     "",
     `Je m’appelle ${name}.`,
     `Mon adresse e-mail : ${email}`,
+    phone ? `Mon téléphone : ${phone}` : "",
     `Mon projet : ${topic}`,
     date ? `Date souhaitée : ${date}` : "",
     slot && slot !== "À convenir" ? `Créneau souhaité : ${slot}` : "",
@@ -646,7 +652,8 @@ if (contactForm && formStatus) {
 applyProgramFilters();
 updateBookingMode();
 loadAvailability();
-window.setInterval(loadAvailability, 30_000);
+// Google Apps Script : interrogé moins souvent pour rester dans les quotas gratuits.
+window.setInterval(loadAvailability, BOOKING_API_URL ? 120_000 : 30_000);
 window.addEventListener("focus", loadAvailability);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) loadAvailability();
@@ -655,14 +662,87 @@ document.addEventListener("visibilitychange", () => {
 const year = document.querySelector("[data-year]");
 if (year) year.textContent = String(new Date().getFullYear());
 
-function openLegalPanelFromHash() {
-  const hash = window.location.hash;
-  if (!hash) return;
-  const panel = document.getElementById(hash.slice(1));
-  if (panel?.tagName === "DETAILS") panel.open = true;
+const legalDialog = document.querySelector("#legal-dialog");
+const legalContent = legalDialog?.querySelector(".legal-dialog-content");
+const legalRailLinks = legalDialog ? [...legalDialog.querySelectorAll("[data-legal-jump]")] : [];
+const legalArticles = legalContent ? [...legalContent.querySelectorAll("[data-legal-article]")] : [];
+const legalTargets = { "legal-mentions": "mentions", "legal-confidentialite": "confidentialite" };
+
+function legalTargetFromHash() {
+  return legalTargets[window.location.hash.slice(1)] || "";
 }
-document.querySelectorAll('a[href="#mentions-legales"], a[href="#confidentialite"]').forEach((link) => {
-  link.addEventListener("click", () => window.setTimeout(openLegalPanelFromHash, 0));
+
+function scrollLegalTo(articleId) {
+  const article = legalArticles.find((item) => item.dataset.legalArticle === articleId);
+  if (!article || !legalContent) return;
+  legalContent.scrollTop = Math.max(0, article.offsetTop - 10);
+}
+
+function markLegalCurrent(articleId) {
+  legalRailLinks.forEach((link) => {
+    if (link.dataset.legalJump === articleId) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
+  });
+}
+
+function openLegalDialog(articleId) {
+  if (!legalDialog) return;
+  const target = articleId || legalRailLinks[0]?.dataset.legalJump;
+  if (!legalDialog.open) {
+    if (typeof legalDialog.showModal === "function") legalDialog.showModal();
+    else legalDialog.setAttribute("open", "");
+  }
+  if (target) {
+    window.requestAnimationFrame(() => {
+      scrollLegalTo(target);
+      markLegalCurrent(target);
+    });
+  }
+  legalDialog.querySelector("[data-legal-close]")?.focus();
+}
+
+function closeLegalDialog() {
+  if (!legalDialog?.open) return;
+  if (typeof legalDialog.close === "function") legalDialog.close();
+  else {
+    legalDialog.removeAttribute("open");
+    legalDialog.dispatchEvent(new window.Event("close"));
+  }
+}
+
+legalDialog?.addEventListener("click", (event) => {
+  if (event.target === legalDialog) closeLegalDialog();
 });
-window.addEventListener("hashchange", openLegalPanelFromHash);
-openLegalPanelFromHash();
+legalDialog?.querySelector("[data-legal-close]")?.addEventListener("click", closeLegalDialog);
+legalDialog?.addEventListener("close", () => {
+  if (legalTargetFromHash()) {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+});
+
+legalRailLinks.forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    scrollLegalTo(link.dataset.legalJump);
+    markLegalCurrent(link.dataset.legalJump);
+  });
+});
+
+legalContent?.addEventListener("scroll", () => {
+  const visible = legalArticles.filter((article) => article.offsetTop - legalContent.scrollTop <= 40);
+  const current = visible[visible.length - 1];
+  if (current) markLegalCurrent(current.dataset.legalArticle);
+});
+
+document.addEventListener("click", (event) => {
+  const trigger = event.target instanceof Element ? event.target.closest("[data-legal-open]") : null;
+  if (!trigger) return;
+  event.preventDefault();
+  openLegalDialog(trigger.dataset.legalOpen);
+});
+
+window.addEventListener("hashchange", () => {
+  const target = legalTargetFromHash();
+  if (target) openLegalDialog(target);
+});
+if (legalTargetFromHash()) openLegalDialog(legalTargetFromHash());
