@@ -5,6 +5,8 @@ const PUBLIC_TOPIC = "Je souhaite réserver une balade publique";
 const MAX_CAPACITY = 25;
 // URL de la Web App Apps Script (…/exec), pour la version GitHub Pages. Laisser vide avec le serveur Python local.
 const BOOKING_API_URL = "https://script.google.com/macros/s/AKfycbzo7ZZCjaeM2cOuqeLq08qfhwOBwKuCn2zWvHCXamJhlxy67ZM1or_glOYAkx32BKe4hA/exec";
+const IS_LOCAL_PREVIEW = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.hostname.endsWith(".e2b.app");
+const ACTIVE_API_URL = IS_LOCAL_PREVIEW ? "" : BOOKING_API_URL;
 const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
 
 const header = document.querySelector("[data-header]");
@@ -31,6 +33,15 @@ const submitButton = document.querySelector("#submit-booking");
 const firstNameInput = document.querySelector("#first-name");
 const lastNameInput = document.querySelector("#last-name");
 const phoneInput = document.querySelector("#phone");
+const walkDialog = document.querySelector("#walk-dialog");
+const walkDialogTitle = document.querySelector("#walk-dialog-title");
+const walkDialogKicker = document.querySelector("#walk-dialog-kicker");
+const walkDialogContent = document.querySelector("#walk-dialog-content");
+const walkDialogFoot = document.querySelector("#walk-dialog-foot");
+const walkDialogDates = document.querySelector("#walk-dialog-dates");
+const walkArticles = walkDialog ? [...walkDialog.querySelectorAll("[data-walk-article]")] : [];
+const walkFallbackArticle = walkDialog?.querySelector("[data-walk-fallback]");
+const walkFallbackText = walkDialog?.querySelector("[data-walk-fallback-text]");
 
 let availabilityLoaded = false;
 let availabilityRequest = null;
@@ -104,50 +115,87 @@ const inspirationCards = [];
 const escapeHtml = (value) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-// Une carte par date, dans l’ordre chronologique : les prochaines balades d’abord.
+function formatWalkPeriod(liensDates) {
+  if (!liensDates.length) return "";
+  const lire = (lien) => ({
+    jour: lien.querySelector(".program-date-day")?.textContent?.trim() || "",
+    mois: lien.querySelector(".program-date-month")?.textContent?.trim() || "",
+    annee: (lien.dataset.programDate || "").slice(0, 4),
+  });
+  const premier = lire(liensDates[0]);
+  if (liensDates.length === 1) return `${premier.jour} ${premier.mois} ${premier.annee}`.trim();
+  const dernier = lire(liensDates[liensDates.length - 1]);
+  if (premier.mois === dernier.mois && premier.annee === dernier.annee) {
+    return `${premier.jour} & ${dernier.jour} ${premier.mois} ${premier.annee}`.trim();
+  }
+  return `${premier.jour} ${premier.mois} & ${dernier.jour} ${dernier.mois} ${dernier.annee}`.trim();
+}
+
+// Une carte par balade à venir, dans l’ordre chronologique, avec sa photo et son résumé.
 function buildInspirationTrack() {
   if (!inspirationTrack) return;
-  const liens = [...document.querySelectorAll("[data-program-date]")]
-    .filter((lien) => !lien.hidden)
-    .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
+  const baladesAVenir = programCards
+    .map((card) => {
+      const liensDates = [...card.querySelectorAll("[data-program-date]")]
+        .filter((lien) => !lien.hidden)
+        .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
+      return {
+        card,
+        liensDates,
+        premiereDate: liensDates[0]?.dataset.programDate || "",
+      };
+    })
+    .filter((entree) => entree.liensDates.length > 0)
+    .sort((a, b) => a.premiereDate.localeCompare(b.premiereDate));
+
   inspirationTrack.replaceChildren();
   inspirationCards.length = 0;
 
-  liens.forEach((lien) => {
-    const date = lien.dataset.programDate || "";
-    const walk = lien.dataset.walk || "";
-    const slot = lien.dataset.slot || "";
-    const dateComplete = lien.dataset.fullDate || "";
-    const kind = lien.closest("[data-program-card]")?.querySelector(".program-kind")?.textContent?.trim() || "";
-    const jour = lien.querySelector(".program-date-day")?.textContent?.trim() || "";
-    const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
-    const mois = lien.querySelector(".program-date-month")?.textContent?.trim() || "";
+  baladesAVenir.forEach(({ card, liensDates }, index) => {
+    const walk = card.dataset.walk || "";
+    const slot = card.dataset.slot || "";
+    const image = card.dataset.image || "";
+    const imageAlt = card.dataset.imageAlt || walk;
+    const summary = card.dataset.summary || "";
+    const kind = card.querySelector(".program-kind")?.textContent?.trim() || "";
+    const numero = String(index + 1).padStart(2, "0");
+    const periode = formatWalkPeriod(liensDates);
 
     const carte = document.createElement("article");
     carte.className = "next-card";
     carte.setAttribute("role", "listitem");
+    carte.dataset.walk = walk;
 
-    const lienCarte = document.createElement("a");
-    lienCarte.className = "next-card-link";
-    lienCarte.href = "#contact";
-    lienCarte.dataset.interest = PUBLIC_TOPIC;
-    lienCarte.dataset.walk = walk;
-    lienCarte.dataset.date = date;
-    lienCarte.dataset.slot = slot;
-    lienCarte.setAttribute("aria-label", `Réserver une place pour ${walk} le ${dateComplete}`);
-    lienCarte.innerHTML = `
-      <span class="next-card-date">
-        <span class="next-card-day">${escapeHtml(jour)}</span>
-        <span class="next-card-meta"><span class="next-card-weekday">${escapeHtml(weekday)}</span><span class="next-card-month">${escapeHtml(mois)}</span></span>
-      </span>
-      <span class="next-card-kind">${escapeHtml(kind)}</span>
-      <span class="next-card-title">${escapeHtml(walk)}</span>
-      <span class="next-card-places" data-next-places>Chargement…</span>
-      <span class="next-card-cta">Réserver cette date <span aria-hidden="true">↗</span></span>`;
+    const datesHtml = liensDates.map((lien, idx) => {
+      const date = lien.dataset.programDate || "";
+      const dateComplete = lien.dataset.fullDate || date;
+      const jour = lien.querySelector(".program-date-day")?.textContent?.trim() || "";
+      const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
+      const mois = lien.querySelector(".program-date-month")?.textContent?.trim() || "";
+      return `
+        <a class="next-card-date-pill" href="#contact" data-next-date-index="${idx}" data-interest="${escapeHtml(PUBLIC_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(slot)}" aria-label="Réserver une place pour ${escapeHtml(walk)} le ${escapeHtml(dateComplete)}">
+          <span class="next-card-date-chip"><b>${escapeHtml(jour)}</b> ${escapeHtml(weekday)} ${escapeHtml(mois)}</span>
+          <span class="next-card-places" data-next-places>Chargement…</span>
+        </a>`;
+    }).join("");
 
-    carte.append(lienCarte);
+    carte.innerHTML = `
+      <div class="next-card-media">
+        <img class="next-card-image" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" loading="lazy">
+        <span class="next-card-badge">${escapeHtml(numero)}</span>
+        <span class="next-card-period">${escapeHtml(periode)}</span>
+      </div>
+      <div class="next-card-body">
+        <span class="next-card-kind">${escapeHtml(kind)}</span>
+        <h3 class="next-card-title"><button type="button" class="next-card-title-link" data-walk-open="${escapeHtml(walk)}">${escapeHtml(walk)}</button></h3>
+        <p class="next-card-summary">${escapeHtml(summary)}</p>
+        <div class="next-card-dates" aria-label="Prochaines dates pour ${escapeHtml(walk)}">${datesHtml}</div>
+      </div>`;
+
+    const pilules = [...carte.querySelectorAll(".next-card-date-pill")];
+    const couplesDates = liensDates.map((lien, idx) => ({ lien, pilule: pilules[idx] }));
     inspirationTrack.append(carte);
-    inspirationCards.push({ carte, lien });
+    inspirationCards.push({ carte, couplesDates });
   });
 
   syncInspirationTrack();
@@ -156,18 +204,23 @@ function buildInspirationTrack() {
 
 // Les places restantes suivent celles du programme.
 function syncInspirationTrack() {
-  inspirationCards.forEach(({ carte, lien }) => {
-    const source = lien.querySelector("[data-availability-label]");
-    const cible = carte.querySelector("[data-next-places]");
-    if (source && cible) cible.textContent = source.textContent;
-    const complet = lien.dataset.soldOut === "true";
-    carte.classList.toggle("is-sold-out", complet);
-    const lienCarte = carte.querySelector(".next-card-link");
-    if (lienCarte) {
-      lienCarte.dataset.soldOut = complet ? "true" : "";
-      lienCarte.setAttribute("aria-disabled", String(complet));
-    }
+  inspirationCards.forEach(({ carte, couplesDates }) => {
+    couplesDates.forEach(({ lien, pilule }) => {
+      if (!pilule) return;
+      const source = lien.querySelector("[data-availability-label]");
+      const cible = pilule.querySelector("[data-next-places]");
+      if (source && cible) cible.textContent = source.textContent;
+      const complet = lien.dataset.soldOut === "true";
+      pilule.classList.toggle("is-sold-out", complet);
+      pilule.dataset.soldOut = complet ? "true" : "";
+      pilule.setAttribute("aria-disabled", String(complet));
+    });
+    const toutesCompletes = couplesDates.length > 0 && couplesDates.every(({ lien }) => lien.dataset.soldOut === "true");
+    carte.classList.toggle("is-sold-out", toutesCompletes);
   });
+  if (typeof renderWalkDialogDates === "function" && walkDialog?.open && walkDialog.dataset.currentWalk) {
+    renderWalkDialogDates(walkDialog.dataset.currentWalk);
+  }
 }
 
 function updateInspirationButtons() {
@@ -217,10 +270,10 @@ function updateBookingMode() {
   });
   if (customParticipantsInput) {
     customParticipantsInput.disabled = publicMode;
-    customParticipantsInput.max = String(MAX_CAPACITY);
+    customParticipantsInput.max = "100";
   }
   if (submitButton) {
-    const label = publicMode ? "Réserver ma place" : "Préparer ma demande";
+    const label = publicMode ? "Réserver ma place" : "Envoyer ma demande";
     const arrow = submitButton.querySelector(".arrow");
     submitButton.firstChild.textContent = `${label} `;
     if (arrow) submitButton.append(arrow);
@@ -517,7 +570,7 @@ async function loadAvailability() {
   if (availabilityRequest) return availabilityRequest;
   availabilityRequest = (async () => {
     try {
-      const response = await fetch(BOOKING_API_URL ? `${BOOKING_API_URL}?api=availability` : "/api/availability", { cache: "no-store", headers: { Accept: "application/json" } });
+      const response = await fetch(ACTIVE_API_URL ? `${ACTIVE_API_URL}?api=availability` : "/api/availability", { cache: "no-store", headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
       // Apps Script répond toujours 200 : une erreur arrive dans le corps de la réponse.
@@ -710,9 +763,9 @@ async function submitPublicBooking(values) {
   updateFormStatus("Enregistrement de votre réservation…", "pending");
   try {
     // Apps Script : text/plain évite le pré-vol CORS ; la réponse reste lisible en JSON.
-    const response = await fetch(BOOKING_API_URL || "/api/bookings", {
+    const response = await fetch(ACTIVE_API_URL || "/api/bookings", {
       method: "POST",
-      headers: BOOKING_API_URL
+      headers: ACTIVE_API_URL
         ? { "Content-Type": "text/plain;charset=utf-8" }
         : { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
@@ -740,11 +793,7 @@ async function submitPublicBooking(values) {
   }
 }
 
-function submitCustomRequest(values) {
-  if (!CONTACT_EMAIL) {
-    updateFormStatus("Le formulaire est prêt, mais son envoi n’est pas configuré. Renseignez l’adresse de réception dans script.js avant la mise en ligne.", "error");
-    return;
-  }
+async function submitCustomRequest(values) {
   const firstName = cleanField(values.get("first_name"));
   const lastName = cleanField(values.get("last_name"));
   const email = cleanField(values.get("email"));
@@ -765,7 +814,7 @@ function submitCustomRequest(values) {
     return;
   }
   if (!phone) {
-    updateFormStatus("Indiquez votre numéro de téléphone : il permet de vous joindre le jour de la balade.", "error");
+    updateFormStatus("Indiquez votre numéro de téléphone : il permet de vous joindre facilement.", "error");
     phoneInput?.focus();
     return;
   }
@@ -774,27 +823,52 @@ function submitCustomRequest(values) {
     phoneInput?.focus();
     return;
   }
-  if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > MAX_CAPACITY)) {
-    updateFormStatus(`Une visite est limitée à ${MAX_CAPACITY} personnes. Indiquez un nombre inférieur ou égal, ou contactez Marie-Tiyi.`, "error");
+  if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > 100)) {
+    updateFormStatus("Indiquez un nombre de personnes compris entre 1 et 100.", "error");
     customParticipantsInput?.focus();
     return;
   }
-  const subject = encodeURIComponent(`Balades Culturelles — ${topic}`);
-  const body = encodeURIComponent([
-    "Bonjour Marie-Tiyi,",
-    "",
-    `Je m’appelle ${firstName} ${lastName}.`,
-    `Mon adresse e-mail : ${email}`,
-    phone ? `Mon téléphone : ${phone}` : "",
-    `Mon projet : ${topic}`,
-    date ? `Date souhaitée : ${date}` : "",
-    slot && slot !== "À convenir" ? `Créneau souhaité : ${slot}` : "",
-    participants ? `Nombre de personnes : ${participants}` : "",
-    "",
-    message || "Je souhaite échanger au sujet d’une balade culturelle.",
-  ].filter(Boolean).join("\n"));
-  updateFormStatus("Votre logiciel de messagerie va s’ouvrir avec votre demande préremplie.");
-  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  if (!email) return;
+
+  if (submitButton) submitButton.disabled = true;
+  updateFormStatus("Envoi de votre demande…", "pending");
+  try {
+    const response = await fetch(ACTIVE_API_URL || "/api/bookings", {
+      method: "POST",
+      headers: ACTIVE_API_URL
+        ? { "Content-Type": "text/plain;charset=utf-8" }
+        : { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        type: "custom_request",
+        topic,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        date,
+        slot,
+        participants,
+        message,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok || result.error) {
+      updateFormStatus(result.message || "La demande n’a pas pu être envoyée. Réessayez ou contactez Marie-Tiyi par téléphone.", "error");
+      return;
+    }
+    updateFormStatus(result.message || "Votre demande a bien été envoyée à Marie-Tiyi. Un e-mail récapitulatif vient de vous être adressé (pensez à vérifier vos indésirables).", "success");
+    if (dateInput) dateInput.value = "";
+    if (customParticipantsInput) customParticipantsInput.value = "";
+    if (messageInput) {
+      messageInput.value = "";
+      messageInput.dataset.prefilled = "false";
+    }
+  } catch (error) {
+    console.error("Échec de l’envoi de la demande sur mesure.", error);
+    updateFormStatus("Impossible d’envoyer la demande pour le moment. Vous pouvez appeler Marie-Tiyi au 06 01 74 04 49 ou écrire à balades.culturelles@gmail.com.", "error");
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
 }
 
 if (contactForm && formStatus) {
@@ -805,7 +879,7 @@ if (contactForm && formStatus) {
       return;
     }
     if (!contactForm.reportValidity()) return;
-    submitCustomRequest(new FormData(contactForm));
+    await submitCustomRequest(new FormData(contactForm));
   });
 }
 
@@ -813,7 +887,7 @@ applyProgramFilters();
 updateBookingMode();
 loadAvailability();
 // Google Apps Script : interrogé moins souvent pour rester dans les quotas gratuits.
-window.setInterval(loadAvailability, BOOKING_API_URL ? 120_000 : 30_000);
+window.setInterval(loadAvailability, ACTIVE_API_URL ? 120_000 : 30_000);
 window.addEventListener("focus", loadAvailability);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) loadAvailability();
@@ -906,3 +980,98 @@ window.addEventListener("hashchange", () => {
   if (target) openLegalDialog(target);
 });
 if (legalTargetFromHash()) openLegalDialog(legalTargetFromHash());
+
+function renderWalkDialogDates(walkName) {
+  if (!walkDialogDates || !walkDialogFoot) return;
+  const programCard = programCards.find((card) => card.dataset.walk === walkName);
+  const liensDates = [...(programCard?.querySelectorAll("[data-program-date]") || [])]
+    .filter((lien) => !lien.hidden)
+    .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
+  walkDialogDates.replaceChildren();
+  walkDialogFoot.hidden = liensDates.length === 0;
+
+  liensDates.forEach((lien) => {
+    const date = lien.dataset.programDate || "";
+    const slot = lien.dataset.slot || programCard?.dataset.slot || "";
+    const dateComplete = lien.dataset.fullDate || date;
+    const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
+    const places = lien.querySelector("[data-availability-label]")?.textContent?.trim() || "Places disponibles";
+    const complet = lien.dataset.soldOut === "true";
+
+    const boutonDate = document.createElement("a");
+    boutonDate.className = `walk-dialog-date-btn${complet ? " is-sold-out" : ""}`;
+    boutonDate.href = "#contact";
+    boutonDate.dataset.soldOut = complet ? "true" : "";
+    boutonDate.setAttribute("aria-disabled", String(complet));
+    boutonDate.innerHTML = `<span>Réserver le ${escapeHtml(weekday)} ${escapeHtml(dateComplete)}</span><small>${escapeHtml(places)}</small>`;
+    boutonDate.addEventListener("click", (event) => {
+      if (complet) {
+        event.preventDefault();
+        return;
+      }
+      closeWalkDialog();
+      updateFormStatus("");
+      if (topicSelect) {
+        topicSelect.value = PUBLIC_TOPIC;
+        updateBookingMode();
+      }
+      if (messageInput && (!messageInput.value.trim() || messageInput.dataset.prefilled === "true")) {
+        messageInput.value = `Balade souhaitée : ${walkName}`;
+        messageInput.dataset.prefilled = "true";
+      }
+      chooseSession({ date, walk: walkName, slot });
+    });
+    walkDialogDates.append(boutonDate);
+  });
+}
+
+function openWalkDialog(walkName) {
+  if (!walkDialog || !walkName) return;
+  walkDialog.dataset.currentWalk = walkName;
+  const programCard = programCards.find((card) => card.dataset.walk === walkName);
+  const kind = programCard?.querySelector(".program-kind")?.textContent?.trim() || "Présentation de la balade";
+  const summary = programCard?.dataset.summary || "";
+
+  if (walkDialogTitle) walkDialogTitle.textContent = walkName;
+  if (walkDialogKicker) walkDialogKicker.textContent = kind;
+
+  const matchingArticle = walkArticles.find((article) => article.dataset.walkArticle === walkName);
+  walkArticles.forEach((article) => {
+    article.hidden = article !== matchingArticle;
+  });
+  if (walkFallbackArticle) {
+    walkFallbackArticle.hidden = Boolean(matchingArticle);
+    if (!matchingArticle && walkFallbackText) walkFallbackText.textContent = summary;
+  }
+
+  renderWalkDialogDates(walkName);
+
+  if (!walkDialog.open) {
+    if (typeof walkDialog.showModal === "function") walkDialog.showModal();
+    else walkDialog.setAttribute("open", "");
+  }
+  if (walkDialogContent) walkDialogContent.scrollTop = 0;
+  walkDialog.querySelector("[data-walk-close]")?.focus();
+}
+
+function closeWalkDialog() {
+  if (!walkDialog?.open) return;
+  if (typeof walkDialog.close === "function") walkDialog.close();
+  else {
+    walkDialog.removeAttribute("open");
+    walkDialog.dispatchEvent(new window.Event("close"));
+  }
+}
+
+walkDialog?.addEventListener("click", (event) => {
+  if (event.target === walkDialog) closeWalkDialog();
+});
+walkDialog?.querySelector("[data-walk-close]")?.addEventListener("click", closeWalkDialog);
+
+document.addEventListener("click", (event) => {
+  const trigger = event.target instanceof Element ? event.target.closest("[data-walk-open]") : null;
+  if (!trigger) return;
+  event.preventDefault();
+  openWalkDialog(trigger.dataset.walkOpen);
+});
+

@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "e45f8cb318";
+const ENGINE_VERSION = "07586b5a2a";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -243,6 +243,9 @@ function doPost(e) {
     const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     // Champ piège invisible : seuls les robots le remplissent.
     if (cleanText_(body.website, 200)) throw new Error("Impossible de traiter cette demande.");
+    if (body.type === "custom_request") {
+      return jsonOutput_(createCustomRequest_(body));
+    }
     const result = createBooking_({
       sessionId: body.session_id,
       name: body.name,
@@ -274,6 +277,91 @@ function doPost(e) {
       message: (error && error.message) || "La réservation n’a pas pu être enregistrée. Veuillez réessayer.",
     });
   }
+}
+
+function createCustomRequest_(body) {
+  const firstName = cleanText_(body.first_name, 60);
+  const lastName = cleanText_(body.last_name, 100);
+  const email = cleanText_(body.email, 254);
+  const phone = cleanText_(body.phone, 40);
+  const topic = cleanText_(body.topic, 160) || "Visite sur demande";
+  const date = cleanText_(body.date, 40);
+  const slot = cleanText_(body.slot, 60);
+  const rawParticipants = cleanText_(body.participants, 20);
+  const message = cleanText_(body.message, 1200);
+
+  if (!firstName) throw new Error("Saisissez votre prénom.");
+  if (!lastName) throw new Error("Saisissez votre nom.");
+  if (!isValidEmail_(email)) throw new Error("Saisissez une adresse e-mail valide.");
+  if (!phone) throw new Error("Saisissez votre numéro de téléphone.");
+  if (!isValidPhone_(phone)) throw new Error("Le numéro de téléphone semble incomplet.");
+  if (rawParticipants) {
+    const count = Number(rawParticipants);
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
+      throw new Error("Indiquez un nombre de personnes compris entre 1 et 100.");
+    }
+  }
+
+  const fullName = `${firstName} ${lastName}`.trim();
+  const guideTo = contactEmail_();
+  const guidePhone = guidePhone_();
+  const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(date) ? longFrenchDate_(date) : date;
+
+  const ownerLines = [
+    "Bonjour Marie-Tiyi,",
+    "",
+    "Une nouvelle demande sur mesure vient d’être envoyée depuis le site :",
+    "",
+    `• Contact : ${fullName}`,
+    `• Téléphone : ${phone}`,
+    `• E-mail : ${email}`,
+    `• Type de sortie : ${topic}`,
+    dateLabel ? `• Date souhaitée : ${dateLabel}` : "",
+    slot && slot !== "À convenir" ? `• Créneau souhaité : ${slot}` : "",
+    rawParticipants ? `• Nombre de personnes estimé : ${rawParticipants}` : "",
+    "",
+    message ? `Message :\n${message}` : "Aucun message complémentaire.",
+  ].filter(Boolean).join("\n");
+
+  MailApp.sendEmail(guideTo, `Demande sur mesure — ${topic} (${fullName})`, ownerLines, {
+    name: `${quoteName_(fullName)} — Balades Culturelles`,
+    replyTo: email,
+  });
+
+  try {
+    const clientLines = [
+      `Bonjour ${firstName},`,
+      "",
+      `J’ai bien reçu votre demande (${topic}) et je vous en remercie.`,
+      "Je reviens vers vous très rapidement pour échanger sur votre sortie et construire la balade ensemble.",
+      "",
+      "Récapitulatif de votre demande :",
+      `• Demande : ${topic}`,
+      dateLabel ? `• Date souhaitée : ${dateLabel}` : "",
+      slot && slot !== "À convenir" ? `• Créneau souhaité : ${slot}` : "",
+      rawParticipants ? `• Nombre de personnes estimé : ${rawParticipants}` : "",
+      message ? `• Précisions : ${message}` : "",
+      "",
+      "Si vous souhaitez ajouter une précision d’ici là, répondez simplement à cet e-mail.",
+      "",
+      "À très bientôt,",
+      "Marie-Tiyi Jalon",
+      `Téléphone : ${guidePhone}`,
+      guideTo,
+    ].filter(Boolean).join("\n");
+
+    MailApp.sendEmail(`${quoteName_(fullName)} <${email}>`, `Votre demande a bien été reçue — Balades Culturelles`, clientLines, {
+      name: CONTACT_NAME,
+      replyTo: guideTo,
+    });
+  } catch (clientMailError) {
+    console.error("Accusé de réception non envoyé pour la demande sur mesure : " + clientMailError);
+  }
+
+  return {
+    ok: true,
+    message: "Votre demande a bien été envoyée à Marie-Tiyi. Un e-mail récapitulatif vient de vous être adressé (pensez à vérifier vos indésirables).",
+  };
 }
 
 function jsonOutput_(payload) {
