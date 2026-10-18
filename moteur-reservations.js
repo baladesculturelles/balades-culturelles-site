@@ -19,6 +19,9 @@
  * que vous suivez vos participants (colonne « Étape ») ; le tableau de bord se met
  * à jour à chaque réservation et toutes les 15 minutes.
  *
+ * Chaque réservation confirmée envoie un e-mail au client depuis votre boîte, avec
+ * une copie pour vous (nécessite l’autorisation « script.send_email » : voir README.md).
+ *
  * Mise en route : exécutez une fois la fonction « installer », puis déployez le
  * projet en application Web (voir README.md).
  */
@@ -37,7 +40,25 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "306ab6ec8a";
+const ENGINE_VERSION = "9fbbe0a3dc";
+
+/* ------------------------------------------------------------------ */
+/* E-mail de confirmation                                             */
+/* ------------------------------------------------------------------ */
+
+// Boîte de Marie-Tiyi : les confirmations partent de cette adresse et le client
+// y répond directement. Pour la changer sans toucher au code :
+// Paramètres du projet → Propriétés du script → CONTACT_EMAIL.
+const CONTACT_EMAIL = "balades.culturelles@gmail.com";
+const CONTACT_NAME = "Marie-Tiyi — Balades Culturelles";
+
+// Case (fusionnée) où vous notez le point de rendez-vous dans la fiche d’une date.
+const MEETING_CELL = "B4";
+const MEETING_FALLBACK = "Le lieu de rendez-vous précis vous sera communiqué quelques jours avant la balade.";
+
+// Balades dont le titre évoque un quartier : la formule de politesse parle alors
+// du quartier. Pour les autres (cimetière, monuments, thème…), une variante neutre est utilisée.
+const QUARTIER_WORDS = Object.freeze(["quartier", "village", "faubourg"]);
 
 // Valeurs de secours tant que le programme du site n’a pas été lu.
 const DEFAULT_CAPACITY = 20;
@@ -429,6 +450,18 @@ function createBooking_(payload) {
     }
     SpreadsheetApp.flush();
 
+    // La réservation est enregistrée et écrite : la confirmation part ensuite.
+    // Un échec d’envoi ne doit jamais annuler une réservation déjà enregistrée.
+    sendConfirmationEmail_({
+      reference: reference,
+      name: name,
+      email: email,
+      session: session,
+      participants: participants,
+      priceEstimate: priceEstimate,
+      sheet: sheet,
+    });
+
     return {
       ok: true,
       reference: reference,
@@ -745,6 +778,120 @@ function addJournalRow_(dashboard, session, visitUrl, booking) {
   ]]).setFontWeight("normal").setFontColor("#242a23").setBackground(null);
   sheet.getRange(2, 1).setNumberFormat("dd/mm/yyyy hh:mm");
   sheet.getRange(2, 2).setNumberFormat("ddd dd/mm/yyyy");
+}
+
+/* ------------------------------------------------------------------ */
+/* E-mail de confirmation                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Envoie la confirmation au client, avec une copie pour Marie-Tiyi.
+ * Jamais d’erreur renvoyée : la réservation est déjà enregistrée à ce stade.
+ */
+function sendConfirmationEmail_(booking) {
+  try {
+    const to = contactEmail_();
+    const content = buildConfirmationEmail_(booking);
+    MailApp.sendEmail(`${quoteName_(booking.name)} <${booking.email}>`, content.subject, content.text, {
+      name: CONTACT_NAME,
+      replyTo: to,
+      cc: to,
+      htmlBody: content.html,
+    });
+  } catch (error) {
+    console.error("E-mail de confirmation non envoyé pour " + booking.reference + " : " + error);
+  }
+}
+
+/** Adresse d’envoi et de réponse, modifiable dans les propriétés du script. */
+function contactEmail_() {
+  return props_().getProperty("CONTACT_EMAIL") || CONTACT_EMAIL;
+}
+
+/** Objet, texte et HTML de la confirmation. */
+function buildConfirmationEmail_(booking) {
+  const session = booking.session;
+  // Dans la fiche le jour prend une majuscule ; dans une phrase, il reste en minuscule
+  // (« samedi 27 février 2027 »).
+  const longDate = longFrenchDate_(session.date).toLowerCase();
+  const recap = [
+    `- Balade : ${session.walk}`,
+    `- Date : ${longDate}`,
+    `- Horaire : ${session.slot}`,
+    `- Personnes : ${booking.participants} personne${booking.participants > 1 ? "s" : ""}`,
+    `- Estimation : ${frenchAmount_(booking.priceEstimate)} €`,
+    `- Votre référence : ${booking.reference}`,
+  ];
+  const closing = QUARTIER_WORDS.some((word) => session.walk.toLowerCase().indexOf(word) !== -1)
+    ? "Au plaisir de vous faire découvrir ce quartier,"
+    : "Au plaisir de vous faire découvrir ce coin de Paris,";
+  const greeting = firstName_(booking.name) ? `Bonjour ${firstName_(booking.name)},` : "Bonjour,";
+  const lines = [greeting, "", "Merci pour votre réservation ! Voici le récapitulatif :", ""]
+    .concat(recap)
+    .concat([
+      "",
+      meetingLine_(booking.sheet),
+      "",
+      "Pour annuler ou modifier, répondez simplement à cet e-mail en rappelant votre référence.",
+      "",
+      closing,
+      "",
+      "Marie-Tiyi",
+      contactEmail_(),
+    ]);
+  const html = ['<div style="font-family:Georgia,serif;font-size:15px;line-height:1.6;color:#242a23">',
+    `<p style="margin:0 0 1em">${escapeHtml_(greeting)}</p>`,
+    '<p style="margin:0 0 1em">Merci pour votre réservation ! Voici le récapitulatif :</p>',
+    '<ul style="margin:0 0 1em;padding-left:1.2em">',
+  ]
+    .concat(recap.map((line) => `<li>${escapeHtml_(line.slice(2))}</li>`))
+    .concat([
+      "</ul>",
+      `<p style="margin:0 0 1em">${escapeHtml_(meetingLine_(booking.sheet))}</p>`,
+      '<p style="margin:0 0 1em">Pour annuler ou modifier, répondez simplement à cet e-mail en rappelant votre référence.</p>',
+      `<p style="margin:0 0 1em">${escapeHtml_(closing)}</p>`,
+      '<p style="margin:0">Marie-Tiyi<br>',
+      `${escapeHtml_(contactEmail_())}</p>`,
+      "</div>",
+    ])
+    .join("");
+  return {
+    subject: `Votre balade est réservée — ${session.walk}, ${longDate}`,
+    text: lines.join("\n"),
+    html: html,
+  };
+}
+
+/** Case jaune de la fiche de la date (B4) : le lieu de rendez-vous, s’il est déjà noté. */
+function meetingLine_(sheet) {
+  let meeting = "";
+  try {
+    meeting = cleanText_(sheet.getRange(MEETING_CELL).getValue(), 300);
+  } catch (error) {
+    meeting = "";
+  }
+  return meeting ? `Lieu de rendez-vous : ${meeting}` : MEETING_FALLBACK;
+}
+
+/** Prénom utilisé dans le corps du message (« Camille Martin » → « Camille »). */
+function firstName_(name) {
+  const first = String(name || "").trim().split(/\s+/)[0] || "";
+  return first.length >= 2 ? first : "";
+}
+
+/** Montant à la française : 15,50 au lieu de 15.5. */
+function frenchAmount_(amount) {
+  const value = Number(amount) || 0;
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(".", ",");
+}
+
+/** Le nom saisi par le visiteur ne doit pas casser l’en-tête de l’e-mail. */
+function quoteName_(name) {
+  return `"${String(name || "").replace(/["\\]/g, " ").trim()}"`;
+}
+
+function escapeHtml_(text) {
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /* ------------------------------------------------------------------ */

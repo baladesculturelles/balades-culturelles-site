@@ -587,7 +587,7 @@ async function submitPublicBooking(values) {
       await loadAvailability();
       return;
     }
-    updateFormStatus(`Réservation confirmée pour ${result.walk}, le ${formatFrenchDate(result.date)} à ${result.slot} (${result.participants} personne${result.participants > 1 ? "s" : ""}, estimation ${result.price_estimate} €). Référence : ${result.reference}. Il reste ${result.remaining} place${result.remaining > 1 ? "s" : ""}. Aucun e-mail automatique n’est envoyé : conservez cette référence.`, "success");
+    updateFormStatus(`Réservation confirmée pour ${result.walk}, le ${formatFrenchDate(result.date)} à ${result.slot} (${result.participants} personne${result.participants > 1 ? "s" : ""}, estimation ${result.price_estimate} €). Référence : ${result.reference}. Il reste ${result.remaining} place${result.remaining > 1 ? "s" : ""}. Un e-mail de confirmation vient de vous être envoyé : conservez votre référence, elle suffit pour annuler ou modifier.`, "success");
     if (sessionSelect) sessionSelect.value = "";
     ageGroupInputs.forEach((input) => { input.value = "0"; });
     ageGroupsTouched = false;
