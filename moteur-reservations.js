@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "6d6b3291ff";
+const ENGINE_VERSION = "e45f8cb318";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -52,6 +52,12 @@ const ENGINE_VERSION = "6d6b3291ff";
 const CONTACT_EMAIL = "balades.culturelles@gmail.com";
 const CONTACT_NAME = "Marie-Tiyi — Balades Culturelles";
 
+// Numéro professionnel de la guide, affiché dans la signature des confirmations
+// (texte simple et version HTML cliquable). Distinct des téléphones des clients.
+// Pour le changer sans toucher au code :
+// Paramètres du projet → Propriétés du script → GUIDE_PHONE.
+const GUIDE_PHONE = "06 01 74 04 49";
+
 // Case (fusionnée) où vous notez le point de rendez-vous dans la fiche d’une date.
 const MEETING_CELL = "B4";
 const MEETING_FALLBACK = "Le lieu de rendez-vous précis vous sera communiqué quelques jours avant la balade.";
@@ -61,7 +67,7 @@ const MEETING_FALLBACK = "Le lieu de rendez-vous précis vous sera communiqué q
 const QUARTIER_WORDS = Object.freeze(["quartier", "village", "faubourg"]);
 
 // Valeurs de secours tant que le programme du site n’a pas été lu.
-const DEFAULT_CAPACITY = 20;
+const DEFAULT_CAPACITY = 25;
 const DEFAULT_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
 const PRICE_KEYS = Object.freeze(["standard", "youth", "child", "underFive"]);
 
@@ -76,14 +82,31 @@ const WEEKDAYS = Object.freeze(["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi
 const COLORS = Object.freeze({ forest: "#183e30", clay: "#b7654b", muted: "#686d62", paper: "#f3efe5", white: "#ffffff" });
 
 // Fiche d’une date : en-tête sur les lignes 1 à 4, titres de colonnes en ligne 6, participants dès la ligne 7.
+// Les colonnes ajoutées après « Vos notes » (prénom, suivi des paiements) ne décalent
+// aucune colonne existante : les anciennes fiches gardent leurs données intactes.
 const VISIT_HEADER_ROW = 6;
 const VISIT_FIRST_ROW = 7;
 const VISIT_HEADERS = Object.freeze([
   "Référence", "Nom", "E-mail", "Téléphone", "Personnes",
   "Plein tarif (26 ans et +)", "Jeunes 15–25 ans", "Enfants 5–14 ans", "Moins de 5 ans",
   "Montant estimé (€)", "Étape", "Réservée le", "Message du client", "Vos notes",
+  "Prénom", "Paiement", "Montant encaissé (€)", "Date du paiement", "Moyen de paiement",
+  "2e versement (€)", "Date du 2e paiement", "Moyen du 2e versement", "Total encaissé (€)",
+  "Remboursement (€)", "Date du remboursement", "Moyen du remboursement",
 ]);
-const VISIT_COL = Object.freeze({ people: 5, status: 11, createdAt: 12 });
+// Numéros de colonnes (1 = A) des champs utilisés par le code.
+const VISIT_COL = Object.freeze({
+  people: 5, status: 11, createdAt: 12, estimated: 10, notes: 14,
+  firstName: 15, payment: 16, amount: 17, payDate: 18, payMethod: 19,
+  amount2: 20, payDate2: 21, payMethod2: 22, total: 23,
+  refund: 24, refundDate: 25, refundMethod: 26,
+});
+
+// États possibles de la colonne « Paiement ». « Payé » remplit les champs vides
+// (montant estimé et date de la balade) ; « Partiel » et « Remboursé » renvoient
+// au journal des versements de la fiche.
+const PAYMENT_STATUSES = Object.freeze(["Non payé", "Payé", "Partiel", "Remboursé"]);
+const PAYMENT_METHODS = Object.freeze(["Espèces", "Carte", "Virement", "Chèque"]);
 
 // Tableau de bord : titre et résumé sur les lignes 1 à 3, titres de colonnes en ligne 5.
 const DASHBOARD_HEADER_ROW = 5;
@@ -93,8 +116,43 @@ const DASHBOARD_HEADERS = Object.freeze([
 ]);
 const JOURNAL_HEADERS = Object.freeze([
   "Réservée le", "Date de la balade", "Balade", "Horaire", "Référence", "Nom", "E-mail", "Téléphone",
-  "Personnes", "Montant estimé (€)", "Fiche de la date", "Message du client",
+  "Personnes", "Montant estimé (€)", "Fiche de la date", "Message du client", "Prénom",
 ]);
+
+/* ------------------------------------------------------------------ */
+/* Comptabilité (tableur privé, jamais publié)                        */
+/* ------------------------------------------------------------------ */
+
+// Nom du tableur privé de suivi des encaissements, rangé dans le dossier des réservations.
+const ACCOUNTING_NAME = "Comptabilité — Balades Culturelles";
+const ACCOUNTING_MOVEMENTS = "Mouvements";
+const ACCOUNTING_SUMMARY = "Synthèse mensuelle";
+const ACCOUNTING_UNPAID = "Impayés";
+const ACCOUNTING_FILES = "Fiches suivies";
+const ACCOUNTING_ALERTS = "À vérifier";
+
+// Un mouvement = une somme encaissée (ou remboursée) datée et rattachée à une réservation.
+const MOVEMENT_HEADERS = Object.freeze([
+  "Référence de réservation", "Balade", "Date de la balade", "Client", "Prénom", "Nom",
+  "Date du paiement", "Type de mouvement", "Montant (€)", "Moyen de paiement",
+  "Statut", "Identifiant", "Fiche de la visite",
+]);
+const MOVEMENT_TYPES = Object.freeze(["Encaissement", "Remboursement"]);
+const MOVEMENT_ACTIVE = "Actif";
+const MOVEMENT_CANCELLED = "Annulé";
+const SUMMARY_HEADERS = Object.freeze(["Mois", "Total encaissé (€)", "Remboursements (€)", "Solde de suivi (€)"]);
+const UNPAID_HEADERS = Object.freeze([
+  "Référence", "Client", "Balade", "Date de la balade", "Montant estimé (€)",
+  "Montant encaissé (€)", "Reste à encaisser (€)", "Statut",
+]);
+const FILES_HEADERS = Object.freeze([
+  "Identifiant de la fiche", "Date de la balade", "Balade", "Horaire", "Dernière lecture", "État",
+]);
+const ALERT_HEADERS = Object.freeze([
+  "Signalement", "Fiche / référence", "Détail", "Date du signalement", "État",
+]);
+const ALERT_OPEN = "À vérifier";
+const ALERT_CLOSED = "Réglé";
 
 // Programme lu pendant l’exécution en cours (chaque appel au script repart de zéro).
 let programCache_ = null;
@@ -148,6 +206,9 @@ function synchroniser() {
     sendVisitReports_();
     return true;
   }, { optional: true });
+  // Comptabilité : tâche indépendante, protégée par son propre verrou.
+  // Une difficulté comptable ne bloque ni les réservations ni les e-mails.
+  runAccountingSafely_();
   if (!done) return "Une réservation était en cours : nouvelle mise à jour au prochain passage.";
   return fetched.ok
     ? `Tableau de bord à jour (${getProgram_().sessions.length} dates lues sur le site).`
@@ -185,6 +246,8 @@ function doPost(e) {
     const result = createBooking_({
       sessionId: body.session_id,
       name: body.name,
+      firstName: body.first_name,
+      lastName: body.last_name,
       email: body.email,
       phone: body.phone,
       message: body.message,
@@ -373,15 +436,25 @@ function programAgeSeconds_() {
 
 function createBooking_(payload) {
   if (!payload || typeof payload !== "object") throw new Error("Données de réservation invalides.");
-  const name = cleanText_(payload.name, 100);
+  // Transition : l'ancien formulaire (encore en ligne) n'envoie qu'un nom complet.
+  // Tant que first_name / last_name manquent, on garde les règles d'avant.
+  const legacy = payload.firstName === undefined && payload.lastName === undefined;
+  const firstName = cleanText_(payload.firstName, 60);
+  const lastName = cleanText_(payload.lastName, 100);
+  const name = legacy ? cleanText_(payload.name, 100) : lastName;
   const email = cleanText_(payload.email, 254);
   const phone = cleanText_(payload.phone, 40);
   const message = cleanText_(payload.message, 1000);
   const sessionId = cleanText_(payload.sessionId, 600);
 
-  if (name.length < 2) throw new Error("Saisissez votre nom.");
+  if (!legacy) {
+    if (!firstName) throw new Error("Saisissez votre prénom.");
+    if (!lastName) throw new Error("Saisissez votre nom.");
+    if (!phone) throw new Error("Saisissez votre numéro de téléphone.");
+  }
+  if (name.length < 1) throw new Error("Saisissez votre nom.");
   if (!isValidEmail_(email)) throw new Error("Saisissez une adresse e-mail valide.");
-  if (phone && phone.replace(/\D/g, "").length < 6) throw new Error("Le numéro de téléphone semble incomplet.");
+  if (phone && !isValidPhone_(phone)) throw new Error("Le numéro de téléphone semble incomplet.");
 
   let program = getProgram_();
   let session = program.sessions.find((item) => item.id === sessionId);
@@ -418,6 +491,8 @@ function createBooking_(payload) {
     const reference = "BC-" + Utilities.getUuid().replace(/-/g, "").substring(0, 12).toUpperCase();
     const createdAt = new Date();
     const row = Math.max(sheet.getLastRow() + 1, VISIT_FIRST_ROW);
+    // Les colonnes « Prénom » et « Paiement » sont vides ou « Non payé » : aucune
+    // réservation n'est jamais déclarée payée automatiquement.
     sheet.getRange(row, 1, 1, VISIT_HEADERS.length).setValues([[
       reference,
       safeSheetText_(name),
@@ -433,6 +508,18 @@ function createBooking_(payload) {
       createdAt,
       safeSheetText_(message),
       "",
+      safeSheetText_(firstName),
+      "Non payé",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
     ]]);
 
     writeStats_(session.id, {
@@ -445,7 +532,7 @@ function createBooking_(payload) {
     // ne doit pas la faire échouer (la synchronisation suivante rattrapera).
     try {
       addJournalRow_(dashboard, session, visit.getUrl(), {
-        createdAt, reference, name, email, phone, participants, priceEstimate, message,
+        createdAt, reference, name, firstName, email, phone, participants, priceEstimate, message,
       });
       writeDashboard_(dashboard);
     } catch (error) {
@@ -458,6 +545,7 @@ function createBooking_(payload) {
     sendConfirmationEmail_({
       reference: reference,
       name: name,
+      firstName: firstName,
       email: email,
       session: session,
       participants: participants,
@@ -602,15 +690,9 @@ function setupVisit_(visit, session, dashboardUrl, capacity) {
 
   sheet.getRange("A1").setValue(session.walk).setFontSize(18).setFontWeight("bold").setFontColor(COLORS.forest);
   sheet.getRange("A2").setValue(`${longFrenchDate_(session.date)} · ${session.slot}`).setFontSize(11).setFontColor(COLORS.muted);
-  // Toujours à jour dans la fiche, même après une modification à la main.
-  const booked = `SUMIFS(E${first}:E, K${first}:K, "<>${CANCELLED}")`;
-  sheet.getRange("A3")
-    .setFormula(`="Places : " & ${booked} & " réservées · " & (${capacity} - ${booked}) & " restantes sur ${capacity}"`)
-    .setFontWeight("bold").setFontColor(COLORS.clay);
   sheet.getRange("A4").setValue("Lieu de rendez-vous :").setFontWeight("bold");
   sheet.getRange("B4:E4").merge().setBackground("#fff6dc")
     .setNote("Notez ici le point de rendez-vous de cette balade.");
-  sheet.getRange("G4").setFormula(`=HYPERLINK("${dashboardUrl}", "← Tableau de bord")`).setFontWeight("bold");
 
   sheet.getRange(VISIT_HEADER_ROW, 1, 1, width).setValues([VISIT_HEADERS.slice()])
     .setFontWeight("bold").setFontColor(COLORS.white).setBackground(COLORS.forest)
@@ -618,18 +700,14 @@ function setupVisit_(visit, session, dashboardUrl, capacity) {
   sheet.setRowHeight(VISIT_HEADER_ROW, 40);
   sheet.setFrozenRows(VISIT_HEADER_ROW);
 
+  writeVisitGroupLabels_(sheet);
+  applyVisitFormats_(sheet);
+  applyVisitValidations_(sheet);
+  writeVisitFormulas_(sheet, dashboardUrl, capacity);
+  writeVisitWidths_(sheet);
+
   const maxRows = sheet.getMaxRows();
   const dataRows = Math.max(1, maxRows - first + 1);
-  sheet.getRange(first, VISIT_COL.status, dataRows, 1).setDataValidation(
-    SpreadsheetApp.newDataValidation()
-      .requireValueInList(STATUSES.slice(), true)
-      .setAllowInvalid(false)
-      .setHelpText("Confirmée = à contacter · Contactée = point de rendez-vous envoyé · Réalisée · Annulée = places libérées.")
-      .build(),
-  );
-  sheet.getRange(first, VISIT_COL.people, dataRows, 6).setNumberFormat("0");
-  sheet.getRange(first, VISIT_COL.createdAt, dataRows, 1).setNumberFormat("dd/mm/yyyy hh:mm");
-
   const table = sheet.getRange(first, 1, dataRows, width);
   const statusIs = (status) => `=$K${first}="${status}"`;
   sheet.setConditionalFormatRules([
@@ -642,8 +720,148 @@ function setupVisit_(visit, session, dashboardUrl, capacity) {
     SpreadsheetApp.newConditionalFormatRule().whenFormulaSatisfied(statusIs("Réalisée"))
       .setBackground("#eaf1e3").setRanges([table]).build(),
   ]);
+}
 
-  [120, 170, 220, 130, 85, 95, 95, 95, 95, 95, 110, 130, 260, 220].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+/**
+ * Complète une fiche déjà en service : nouvelles colonnes (prénom, paiements),
+ * formules réparées et totaux. Les données des participants ne sont jamais
+ * déplacées, réécrites ni supprimées.
+ */
+function ensureVisitLayout_(sheet, file, dashboardUrl, capacity, entries) {
+  const width = VISIT_HEADERS.length;
+  const headers = sheet.getRange(VISIT_HEADER_ROW, 1, 1, width).getValues()[0]
+    .map((value) => String(value == null ? "" : value));
+  const expected = VISIT_HEADERS.slice();
+  const complete = expected.every((title, index) => headers[index] === title);
+  if (!complete) {
+    // Les quatorze premières colonnes ne changent jamais : rien n’est décalé.
+    const from = VISIT_COL.firstName;
+    sheet.getRange(VISIT_HEADER_ROW, from, 1, expected.length - from + 1).setValues([expected.slice(from - 1)])
+      .setFontWeight("bold").setFontColor(COLORS.white).setBackground(COLORS.forest)
+      .setWrap(true).setVerticalAlignment("middle");
+    writeVisitGroupLabels_(sheet);
+    applyVisitFormats_(sheet);
+    applyVisitValidations_(sheet);
+    writeVisitWidths_(sheet);
+  }
+  // Formules au format français (points-virgules) : les anciennes fiches
+  // affichaient « #ERROR! » parce qu’elles avaient été écrites avec des virgules.
+  const places = placesFormula_(capacity);
+  if (String(sheet.getRange("A3").getValue() || "") !== places) {
+    sheet.getRange("A3").setFormula(places).setFontWeight("bold").setFontColor(COLORS.clay);
+  }
+  const link = `=HYPERLINK("${dashboardUrl}";"← Tableau de bord")`;
+  if (String(sheet.getRange("G4").getValue() || "") !== link) {
+    sheet.getRange("G4").setFormula(link).setFontWeight("bold");
+  }
+  // Total encaissé de chaque ligne (formule sans séparateur : valable partout).
+  (entries || []).forEach((entry) => {
+    const formula = `=Q${entry.row}+T${entry.row}`;
+    if (String(entry.values[VISIT_COL.total - 1] == null ? "" : entry.values[VISIT_COL.total - 1]) !== formula) {
+      sheet.getRange(entry.row, VISIT_COL.total).setFormula(formula);
+    }
+  });
+}
+
+/** Ligne « Places : … réservées » : toujours à jour, même après une modification à la main. */
+function placesFormula_(capacity) {
+  const first = VISIT_FIRST_ROW;
+  const booked = `SUMIFS(E${first}:E;K${first}:K;"<>${CANCELLED}")`;
+  return `="Places : " & ${booked} & " réservées · " & (${capacity} - ${booked}) & " restantes sur ${capacity}"`;
+}
+
+function writeVisitFormulas_(sheet, dashboardUrl, capacity) {
+  sheet.getRange("A3").setFormula(placesFormula_(capacity))
+    .setFontWeight("bold").setFontColor(COLORS.clay);
+  sheet.getRange("G4").setFormula(`=HYPERLINK("${dashboardUrl}";"← Tableau de bord")`).setFontWeight("bold");
+}
+
+/** Titres de groupes au-dessus des nouvelles colonnes (ligne 5, jusque-là vide). */
+function writeVisitGroupLabels_(sheet) {
+  const groups = [
+    { from: VISIT_COL.firstName, to: VISIT_COL.firstName, text: "Identité" },
+    { from: VISIT_COL.payment, to: VISIT_COL.total, text: "Paiements" },
+    { from: VISIT_COL.refund, to: VISIT_COL.refundMethod, text: "Remboursement" },
+  ];
+  groups.forEach((group) => {
+    if (group.to > group.from) sheet.getRange(VISIT_HEADER_ROW - 1, group.from, 1, group.to - group.from + 1).merge();
+    sheet.getRange(VISIT_HEADER_ROW - 1, group.from).setValue(group.text)
+      .setFontWeight("bold").setFontColor(COLORS.muted);
+  });
+}
+
+function applyVisitFormats_(sheet) {
+  const first = VISIT_FIRST_ROW;
+  const dataRows = Math.max(1, sheet.getMaxRows() - first + 1);
+  sheet.getRange(first, VISIT_COL.people, dataRows, 6).setNumberFormat("0");
+  sheet.getRange(first, VISIT_COL.createdAt, dataRows, 1).setNumberFormat("dd/mm/yyyy hh:mm");
+  [VISIT_COL.amount, VISIT_COL.amount2, VISIT_COL.total, VISIT_COL.refund].forEach((column) => {
+    sheet.getRange(first, column, dataRows, 1).setNumberFormat("0.00");
+  });
+  [VISIT_COL.payDate, VISIT_COL.payDate2, VISIT_COL.refundDate].forEach((column) => {
+    sheet.getRange(first, column, dataRows, 1).setNumberFormat("dd/mm/yyyy");
+  });
+}
+
+function applyVisitValidations_(sheet) {
+  const first = VISIT_FIRST_ROW;
+  const dataRows = Math.max(1, sheet.getMaxRows() - first + 1);
+  sheet.getRange(first, VISIT_COL.status, dataRows, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(STATUSES.slice(), true)
+      .setAllowInvalid(false)
+      .setHelpText("Confirmée = à contacter · Contactée = point de rendez-vous envoyé · Réalisée · Annulée = places libérées.")
+      .build(),
+  );
+  sheet.getRange(first, VISIT_COL.payment, dataRows, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation()
+      .requireValueInList(PAYMENT_STATUSES.slice(), true)
+      .setAllowInvalid(false)
+      .setHelpText("Non payé = rien reçu · Payé = montant et date remplis tout seuls · Partiel = montant réellement reçu · Remboursé = voir la colonne Remboursement.")
+      .build(),
+  );
+  [VISIT_COL.payMethod, VISIT_COL.payMethod2, VISIT_COL.refundMethod].forEach((column) => {
+    sheet.getRange(first, column, dataRows, 1).setDataValidation(
+      SpreadsheetApp.newDataValidation()
+        .requireValueInList(PAYMENT_METHODS.slice(), true)
+        .setAllowInvalid(false)
+        .setHelpText("Espèces · Carte · Virement · Chèque.")
+        .build(),
+    );
+  });
+}
+
+const VISIT_WIDTHS = Object.freeze([
+  120, 170, 220, 130, 85, 95, 95, 95, 95, 95, 110, 130, 260, 220,
+  130, 120, 140, 120, 130, 130, 125, 135, 140, 140, 135, 135,
+]);
+
+function writeVisitWidths_(sheet) {
+  VISIT_WIDTHS.forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+}
+
+/**
+ * « Payé » : reprend le montant estimé et la date de la balade, mais seulement
+ * si ces champs sont vides. Un montant ou une date déjà saisis ne sont jamais
+ * écrasés, et un 0 saisi volontairement compte comme une valeur.
+ */
+function applyPaidShortcut_(sheet, entries, file) {
+  entries.forEach((entry) => {
+    const values = entry.values;
+    if (String(values[VISIT_COL.payment - 1] == null ? "" : values[VISIT_COL.payment - 1]).trim() !== "Payé") return;
+    const estimated = Number(values[VISIT_COL.estimated - 1]) || 0;
+    const amountEmpty = isEmptyCell_(values[VISIT_COL.amount - 1]);
+    const dateEmpty = isEmptyCell_(values[VISIT_COL.payDate - 1]);
+    if (!amountEmpty && !dateEmpty) return;
+    if (amountEmpty && estimated > 0) {
+      sheet.getRange(entry.row, VISIT_COL.amount).setValue(estimated);
+      values[VISIT_COL.amount - 1] = estimated;
+    }
+    if (dateEmpty && file.date) {
+      sheet.getRange(entry.row, VISIT_COL.payDate).setValue(sheetDate_(file.date));
+      values[VISIT_COL.payDate - 1] = sheetDate_(file.date);
+    }
+  });
 }
 
 function setupDashboard_(dashboard) {
@@ -736,7 +954,7 @@ function writeDashboard_(dashboard) {
       session.removed ? "—" : remaining,
       state,
       stats.toContact,
-      record ? `=HYPERLINK("https://docs.google.com/spreadsheets/d/${record.fileId}/edit", "Ouvrir la fiche")` : "Pas encore de réservation",
+      record ? `=HYPERLINK("https://docs.google.com/spreadsheets/d/${record.fileId}/edit";"Ouvrir la fiche")` : "Pas encore de réservation",
     ];
   });
 
@@ -778,8 +996,9 @@ function addJournalRow_(dashboard, session, visitUrl, booking) {
     phoneCell_(booking.phone),
     booking.participants,
     booking.priceEstimate,
-    `=HYPERLINK("${visitUrl}", "Ouvrir la fiche")`,
+    `=HYPERLINK("${visitUrl}";"Ouvrir la fiche")`,
     safeSheetText_(booking.message || ""),
+    safeSheetText_(booking.firstName || ""),
   ]]).setFontWeight("normal").setFontColor("#242a23").setBackground(null);
   sheet.getRange(2, 1).setNumberFormat("dd/mm/yyyy hh:mm");
   sheet.getRange(2, 2).setNumberFormat("ddd dd/mm/yyyy");
@@ -797,7 +1016,7 @@ function sendConfirmationEmail_(booking) {
   try {
     const to = contactEmail_();
     const content = buildConfirmationEmail_(booking);
-    MailApp.sendEmail(`${quoteName_(booking.name)} <${booking.email}>`, content.subject, content.text, {
+    MailApp.sendEmail(`${quoteName_(displayName_(booking.firstName, booking.name))} <${booking.email}>`, content.subject, content.text, {
       name: CONTACT_NAME,
       replyTo: to,
       htmlBody: content.html,
@@ -860,15 +1079,19 @@ function sendDailySummary_(dashboard) {
     fresh.slice().reverse().forEach((row) => {
       const date = Utilities.formatDate(new Date(row[1]), TIME_ZONE, "yyyy-MM-dd");
       let message = row[11];
-      // Anciennes réservations : le message n’était pas encore copié au journal.
-      if (!message) {
+      let firstName = String(row[12] == null ? "" : row[12]).trim();
+      // Anciennes réservations : le message et le prénom n’étaient pas encore copiés au journal.
+      if (!message || !firstName) {
         const record = parseVisit_(store.getProperty(propertyKey_("visit:", `${date}|${row[2]}|${row[3]}`)));
         const visit = record && openIfAlive_(record.fileId);
         const participant = visit && readVisitRows_(visitSheet_(visit)).find((item) => item[0] === row[4]);
-        message = participant ? participant[12] : "";
+        if (participant) {
+          if (!message) message = participant[12];
+          if (!firstName) firstName = String(participant[VISIT_COL.firstName - 1] == null ? "" : participant[VISIT_COL.firstName - 1]).trim();
+        }
       }
       text.push(`${row[2]} — ${longFrenchDate_(date).toLowerCase()} — ${row[3]}`,
-        `Nom : ${row[5]}`, `E-mail : ${row[6]}`, `Téléphone : ${String(row[7]).replace(/^'/, "")}`,
+        `Nom : ${displayName_(firstName, row[5])}`, `E-mail : ${row[6]}`, `Téléphone : ${String(row[7]).replace(/^'/, "")}`,
         `Personnes : ${row[8]}`, `Montant estimé : ${frenchAmount_(row[9])} €`,
         `Message du client : ${message || "—"}`, `Référence : ${row[4]}`, "");
     });
@@ -901,7 +1124,8 @@ function sendVisitReports_() {
         sheet ? meetingLine_(sheet) : MEETING_FALLBACK,
         `Personnes : ${stats.booked}`, `Places restantes : ${Math.max(0, getProgram_().capacity - stats.booked)}`, "", "Participants non annulés", ""];
       rows.forEach((row) => {
-        text.push(`Nom : ${row[1]}`, `E-mail : ${row[2]}`, `Téléphone : ${String(row[3]).replace(/^'/, "")}`,
+        const firstName = String(row[VISIT_COL.firstName - 1] == null ? "" : row[VISIT_COL.firstName - 1]).trim();
+        text.push(`Nom : ${displayName_(firstName, row[1])}`, `E-mail : ${row[2]}`, `Téléphone : ${String(row[3]).replace(/^'/, "")}`,
           `Personnes : ${row[4]}`, `Montant : ${frenchAmount_(row[9])} €`, `Étape : ${row[10]}`,
           `Message du client : ${row[12] || "—"}`, `Référence : ${row[0]}`);
         if (row[13]) text.push(`Vos notes : ${row[13]}`);
@@ -921,6 +1145,24 @@ function contactEmail_() {
   return props_().getProperty("CONTACT_EMAIL") || CONTACT_EMAIL;
 }
 
+/** Numéro professionnel de la guide (signature des confirmations), modifiable
+ * dans les propriétés du script. Distinct des téléphones des clients. */
+function guidePhone_() {
+  return cleanText_(props_().getProperty("GUIDE_PHONE") || GUIDE_PHONE, 40);
+}
+
+/** Numéro cliquable pour un téléphone : « 06 01 74 04 49 » → « +33601740449 ». */
+function telHref_(phone) {
+  const raw = String(phone || "").replace(/[^\d+]/g, "");
+  if (!raw) return "";
+  if (raw.charAt(0) === "+") return "+" + raw.slice(1).replace(/\D/g, "");
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.indexOf("00") === 0) return "+" + digits.slice(2);
+  if (digits.charAt(0) === "0") return "+33" + digits.slice(1);
+  return "+" + digits;
+}
+
 /** Objet, texte et HTML de la confirmation. */
 function buildConfirmationEmail_(booking) {
   const session = booking.session;
@@ -938,7 +1180,10 @@ function buildConfirmationEmail_(booking) {
   const closing = QUARTIER_WORDS.some((word) => session.walk.toLowerCase().indexOf(word) !== -1)
     ? "Au plaisir de vous faire découvrir ce quartier,"
     : "Au plaisir de vous faire découvrir ce coin de Paris,";
-  const greeting = firstName_(booking.name) ? `Bonjour ${firstName_(booking.name)},` : "Bonjour,";
+  // Salutation : le prénom renseigné dans le formulaire, sinon (réservations
+  // anciennes) le premier mot du nom complet.
+  const given = cleanText_(booking.firstName, 60) || firstName_(booking.name);
+  const greeting = given ? `Bonjour ${given},` : "Bonjour,";
   const lines = [greeting, "", "Merci pour votre réservation ! Voici le récapitulatif :", ""]
     .concat(recap)
     .concat([
@@ -949,7 +1194,8 @@ function buildConfirmationEmail_(booking) {
       "",
       closing,
       "",
-      "Marie-Tiyi",
+      "Marie-Tiyi Jalon",
+      `Téléphone : ${guidePhone_()}`,
       contactEmail_(),
     ]);
   const html = ['<div style="font-family:Georgia,serif;font-size:15px;line-height:1.6;color:#242a23">',
@@ -963,7 +1209,8 @@ function buildConfirmationEmail_(booking) {
       `<p style="margin:0 0 1em">${escapeHtml_(meetingLine_(booking.sheet))}</p>`,
       '<p style="margin:0 0 1em">Pour annuler ou modifier, répondez simplement à cet e-mail en rappelant votre référence.</p>',
       `<p style="margin:0 0 1em">${escapeHtml_(closing)}</p>`,
-      '<p style="margin:0">Marie-Tiyi<br>',
+      '<p style="margin:0">Marie-Tiyi Jalon<br>',
+      `Téléphone : <a href="tel:${escapeHtml_(telHref_(guidePhone_()))}" style="color:#183e30">${escapeHtml_(guidePhone_())}</a><br>`,
       `${escapeHtml_(contactEmail_())}</p>`,
       "</div>",
     ])
@@ -992,6 +1239,13 @@ function firstName_(name) {
   return first.length >= 2 ? first : "";
 }
 
+/** Nom affiché d’un client : prénom + nom, ou le nom seul (réservations anciennes). */
+function displayName_(firstName, name) {
+  const first = cleanText_(firstName, 60);
+  const last = cleanText_(name, 100);
+  return first ? `${first} ${last}`.trim() : last;
+}
+
 /** Montant à la française : 15,50 au lieu de 15.5. */
 function frenchAmount_(amount) {
   const value = Number(amount) || 0;
@@ -1008,14 +1262,509 @@ function escapeHtml_(text) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Comptabilité : suivi des encaissements                             */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Principe : la fiche d’une date reste la source de vérité. Chaque participant
+ * peut porter deux versements (montant + date + moyen) et un remboursement.
+ * Le moteur en tire des « mouvements » datés, qu’il reporte dans le tableur
+ * privé « Comptabilité — Balades Culturelles » sans jamais compter deux fois
+ * le même versement (identifiant stable = référence de réservation + clé).
+ */
+
+/** Tableur privé de comptabilité, rangé dans le dossier des réservations. */
+function getAccounting_(root) {
+  const known = openIfAlive_(props_().getProperty("ACCOUNTING_ID"));
+  if (known) return known;
+  let book = findSpreadsheet_(root, ACCOUNTING_NAME);
+  if (!book) book = createSpreadsheetIn_(root, ACCOUNTING_NAME);
+  props_().setProperty("ACCOUNTING_ID", book.getId());
+  return book;
+}
+
+/** Onglet du tableur comptable, créé au besoin avec ses titres. */
+function accountingSheet_(book, name, headers) {
+  let sheet = book.getSheetByName(name);
+  if (!sheet) sheet = book.insertSheet(name);
+  const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0]
+    .map((value) => String(value == null ? "" : value));
+  if (current.join("|") !== headers.join("|")) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers.slice()])
+      .setFontWeight("bold").setFontColor(COLORS.white).setBackground(COLORS.forest)
+      .setVerticalAlignment("middle");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function setupAccounting_(book) {
+  const sheets = book.getSheets();
+  if (!book.getSheetByName(ACCOUNTING_MOVEMENTS) && sheets.length === 1) sheets[0].setName(ACCOUNTING_MOVEMENTS);
+  accountingSheet_(book, ACCOUNTING_MOVEMENTS, MOVEMENT_HEADERS);
+  accountingSheet_(book, ACCOUNTING_FILES, FILES_HEADERS);
+  accountingSheet_(book, ACCOUNTING_UNPAID, UNPAID_HEADERS);
+  accountingSheet_(book, ACCOUNTING_ALERTS, ALERT_HEADERS);
+  const summary = accountingSheet_(book, ACCOUNTING_SUMMARY, SUMMARY_HEADERS);
+  // Titre et rappel : le solde de suivi n'est pas un chiffre d'affaires à déclarer.
+  summary.getRange("A1").setValue("Synthèse mensuelle — encaissements et remboursements")
+    .setFontSize(16).setFontWeight("bold").setFontColor(COLORS.forest);
+  summary.getRange("A2").setValue(
+    "Mois calculés sur la date des paiements et des remboursements. Le solde de suivi est un "
+    + "indicatif de gestion : il ne correspond pas automatiquement au chiffre d’affaires à déclarer.",
+  ).setFontColor(COLORS.muted);
+  summary.getRange(1, 1, 1, SUMMARY_HEADERS.length).clearContent();
+  summary.getRange(3, 1, 1, SUMMARY_HEADERS.length).setValues([SUMMARY_HEADERS.slice()])
+    .setFontWeight("bold").setFontColor(COLORS.white).setBackground(COLORS.forest)
+    .setVerticalAlignment("middle");
+  summary.setFrozenRows(3);
+}
+
+/** Traitement complet : un seul passage, protégé par son propre verrou. */
+function runAccountingSafely_() {
+  try {
+    const store = props_();
+    const key = "accounting:run";
+    const started = Number(store.getProperty(key) || 0);
+    if (started && Date.now() - started < 300000) {
+      console.warn("Suivi comptable : un traitement est déjà en cours.");
+      return;
+    }
+    store.setProperty(key, String(Date.now()));
+    try {
+      runAccounting_();
+    } finally {
+      store.deleteProperty(key);
+    }
+  } catch (error) {
+    // Une difficulté comptable ne doit jamais bloquer les réservations.
+    console.error("Suivi comptable non mis à jour : " + error);
+  }
+}
+
+function runAccounting_() {
+  const root = getRootFolder_();
+  const book = getAccounting_(root);
+  setupAccounting_(book);
+  const dashboardUrl = getDashboard_(root).getUrl();
+  const capacity = getProgram_().capacity;
+  const files = collectVisitFiles_(book);
+  const alerts = [];
+  const computed = [];
+  const unpaid = [];
+  const seenReferences = {};
+
+  files.forEach((file) => {
+    const visit = openIfAlive_(file.fileId);
+    if (!visit) {
+      file.state = "Inaccessible";
+      alerts.push({
+        kind: "Fiche inaccessible",
+        target: file.fileId,
+        detail: `La fiche « ${file.walk || "?"} » (${file.date || "date inconnue"}) n’a pas pu être ouverte. Les montants déjà connus sont conservés.`,
+      });
+      return;
+    }
+    const sheet = visitSheet_(visit);
+    const entries = readVisitEntries_(sheet);
+    ensureVisitLayout_(sheet, file, dashboardUrl, capacity, entries);
+    applyPaidShortcut_(sheet, entries, file);
+    entries.forEach((entry) => {
+      const values = entry.values;
+      const reference = String(values[0] == null ? "" : values[0]).trim();
+      const lastName = String(values[1] == null ? "" : values[1]).trim();
+      const firstName = String(values[VISIT_COL.firstName - 1] == null ? "" : values[VISIT_COL.firstName - 1]).trim();
+      const status = String(values[VISIT_COL.payment - 1] == null ? "" : values[VISIT_COL.payment - 1]).trim();
+      const estimated = Number(values[VISIT_COL.estimated - 1]) || 0;
+      let doublon = false;
+      if (reference) {
+        if (seenReferences[reference]) {
+          doublon = true;
+          alerts.push({
+            kind: "Référence en double",
+            target: reference,
+            detail: `Cette référence apparaît dans deux fiches : seul le premier mouvement est compté (fiche « ${file.walk || "?"} »).`,
+          });
+        } else {
+          seenReferences[reference] = true;
+        }
+      } else if (lastName) {
+        alerts.push({
+          kind: "Réservation sans référence",
+          target: `${file.walk || "?"} — ${lastName}`,
+          detail: "Cette ligne n’a pas de référence : son paiement est suivi par son nom. Ajoutez la référence BC-… pour un suivi stable.",
+        });
+      }
+      // Une référence en double ne doit jamais être comptée deux fois.
+      const movements = doublon ? [] : computeMovements_(entry, file, reference, firstName, lastName, alerts);
+      computed.push.apply(computed, movements);
+      const received = movements.reduce((total, movement) => {
+        return total + (movement.type === "Remboursement" ? -movement.amount : movement.amount);
+      }, 0);
+      if (estimated > 0 && received < estimated) {
+        unpaid.push([
+          reference, displayName_(firstName, lastName), file.walk, file.date,
+          estimated, received, Math.max(0, estimated - received), status || "Non payé",
+        ]);
+      }
+    });
+  });
+
+  const movementsSheet = accountingSheet_(book, ACCOUNTING_MOVEMENTS, MOVEMENT_HEADERS);
+  const rows = reconcileMovements_(readTabRows_(movementsSheet, MOVEMENT_HEADERS.length), computed, seenReferences);
+  writeMovementRows_(movementsSheet, rows);
+  writeMonthlySummary_(accountingSheet_(book, ACCOUNTING_SUMMARY, SUMMARY_HEADERS), rows);
+  writeSimpleRows_(accountingSheet_(book, ACCOUNTING_UNPAID, UNPAID_HEADERS), unpaid);
+  writeFilesRows_(accountingSheet_(book, ACCOUNTING_FILES, FILES_HEADERS), files);
+  writeAlerts_(accountingSheet_(book, ACCOUNTING_ALERTS, ALERT_HEADERS), alerts);
+}
+
+/**
+ * Fiches à suivre : celles connues du moteur et celles déjà enregistrées dans le
+ * tableur comptable (une fiche retirée du programme reste suivie, et l’historique
+ * comptable n’est jamais effacé).
+ */
+function collectVisitFiles_(book) {
+  const files = [];
+  const seen = {};
+  const add = (fileId, info) => {
+    if (!fileId || seen[fileId]) return;
+    seen[fileId] = true;
+    files.push({
+      fileId: fileId,
+      date: info.date || "",
+      walk: info.walk || "",
+      slot: info.slot || "",
+      state: "Lue",
+    });
+  };
+  const stored = props_().getProperties();
+  Object.keys(stored).forEach((key) => {
+    if (key.indexOf("visit:") !== 0) return;
+    const record = parseVisit_(stored[key]);
+    if (!record || !record.fileId) return;
+    add(record.fileId, record);
+  });
+  const sheet = book.getSheetByName(ACCOUNTING_FILES);
+  if (sheet) {
+    readTabRows_(sheet, FILES_HEADERS.length).forEach((row) => {
+      const fileId = String(row[0] == null ? "" : row[0]).trim();
+      if (!fileId) return;
+      add(fileId, { date: isoOf_(row[1]), walk: String(row[2] || ""), slot: String(row[3] || "") });
+    });
+  }
+  return files;
+}
+
+/** Mouvements d’un participant : deux versements possibles et un remboursement. */
+function computeMovements_(entry, file, reference, firstName, lastName, alerts) {
+  const values = entry.values;
+  const client = displayName_(firstName, lastName);
+  const slots = [
+    { key: "p1", label: "1er versement", type: "Encaissement", amount: values[VISIT_COL.amount - 1], date: values[VISIT_COL.payDate - 1], method: values[VISIT_COL.payMethod - 1] },
+    { key: "p2", label: "2e versement", type: "Encaissement", amount: values[VISIT_COL.amount2 - 1], date: values[VISIT_COL.payDate2 - 1], method: values[VISIT_COL.payMethod2 - 1] },
+    { key: "r1", label: "Remboursement", type: "Remboursement", amount: values[VISIT_COL.refund - 1], date: values[VISIT_COL.refundDate - 1], method: values[VISIT_COL.refundMethod - 1] },
+  ];
+  const movements = [];
+  slots.forEach((slot) => {
+    if (isEmptyCell_(slot.amount)) return;
+    const amount = parseAmount_(slot.amount);
+    if (amount === null) {
+      alerts.push({
+        kind: "Montant illisible",
+        target: reference || client,
+        detail: `Le ${slot.label.toLowerCase()} de ${client || "client sans nom"} n’est pas un montant : il n’est pas compté.`,
+      });
+      return;
+    }
+    const date = parseSheetDate_(slot.date);
+    if (!date) {
+      alerts.push({
+        kind: "Montant sans date",
+        target: reference || client,
+        detail: `Le ${slot.label.toLowerCase()} de ${client || "client sans nom"} (${frenchAmount_(amount)} €) n’a pas de date : il n’est rattaché à aucun mois.`,
+      });
+      return;
+    }
+    movements.push({
+      id: reference ? `${reference}|${slot.key}` : `${file.fileId}|${client}|${isoOf_(date)}|${slot.key}`,
+      reference: reference,
+      firstName: firstName,
+      lastName: lastName,
+      client: client,
+      walk: file.walk,
+      date: file.date,
+      fileId: file.fileId,
+      paidAt: date,
+      type: slot.type,
+      amount: amount,
+      method: String(slot.method == null ? "" : slot.method).trim(),
+    });
+  });
+  return movements;
+}
+
+/**
+ * Réconciliation : un mouvement déjà connu est mis à jour sur place (jamais
+ * dupliqué), un mouvement disparu d’une fiche lisible est signalé et neutralisé,
+ * un mouvement dont la fiche a disparu est conservé tel quel.
+ */
+function reconcileMovements_(existing, computed, seenReferences) {
+  const byId = {};
+  computed.forEach((movement) => { byId[movement.id] = movement; });
+  const rows = [];
+  existing.forEach((row) => {
+    const id = String(row[MOVEMENT_HEADERS.length - 2] == null ? "" : row[MOVEMENT_HEADERS.length - 2]);
+    if (!id || byId[id]) return;
+    const reference = String(row[0] == null ? "" : row[0]).trim();
+    if (reference && seenReferences[reference]) {
+      // La réservation existe encore mais le paiement a été retiré de la fiche.
+      rows.push(row.slice(0, MOVEMENT_HEADERS.length - 3)
+        .concat([MOVEMENT_CANCELLED, id, row[MOVEMENT_HEADERS.length - 1]]));
+    } else {
+      rows.push(row.slice());
+    }
+  });
+  computed.forEach((movement) => {
+    rows.push([
+      movement.reference, movement.walk, movement.date ? sheetDate_(movement.date) : "",
+      movement.client, movement.firstName, movement.lastName, movement.paidAt,
+      movement.type, movement.amount, movement.method,
+      MOVEMENT_ACTIVE, movement.id,
+      movement.fileId ? `=HYPERLINK("https://docs.google.com/spreadsheets/d/${movement.fileId}/edit";"Ouvrir la fiche")` : "",
+    ]);
+  });
+  rows.sort((a, b) => {
+    const dateA = parseSheetDate_(a[6]);
+    const dateB = parseSheetDate_(b[6]);
+    const stampA = dateA ? dateA.getTime() : 0;
+    const stampB = dateB ? dateB.getTime() : 0;
+    return stampA - stampB
+      || compare_(String(a[0] || ""), String(b[0] || ""))
+      || compare_(String(a[7] || ""), String(b[7] || ""));
+  });
+  return rows;
+}
+
+function writeMovementRows_(sheet, rows) {
+  const last = sheet.getLastRow();
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, MOVEMENT_HEADERS.length).setValues(rows);
+    sheet.getRange(2, 3, rows.length, 1).setNumberFormat("dd/mm/yyyy");
+    sheet.getRange(2, 7, rows.length, 1).setNumberFormat("dd/mm/yyyy");
+    sheet.getRange(2, 9, rows.length, 1).setNumberFormat("0.00");
+    const links = rows.map((row) => [row[MOVEMENT_HEADERS.length - 1] || ""]);
+    sheet.getRange(2, MOVEMENT_HEADERS.length, rows.length, 1).setFormulas(links);
+  }
+  if (last > rows.length + 1) {
+    sheet.getRange(rows.length + 2, 1, last - rows.length - 1, MOVEMENT_HEADERS.length).clearContent();
+  }
+  [150, 260, 120, 220, 130, 170, 120, 140, 110, 130, 100, 220, 150].forEach((size, index) => {
+    sheet.setColumnWidth(index + 1, size);
+  });
+}
+
+/** Synthèse mensuelle : les mois viennent des dates de paiement, pas des balades. */
+function writeMonthlySummary_(sheet, rows) {
+  const months = {};
+  rows.forEach((row) => {
+    if (String(row[10] || "") !== MOVEMENT_ACTIVE) return;
+    const date = parseSheetDate_(row[6]);
+    if (!date) return;
+    const key = monthKey_(date);
+    if (!months[key]) months[key] = { key: key, received: 0, refunded: 0 };
+    const amount = Number(row[8]) || 0;
+    if (String(row[7] || "") === "Remboursement") months[key].refunded += amount;
+    else months[key].received += amount;
+  });
+  const keys = Object.keys(months).sort();
+  const out = [];
+  let year = "";
+  let yearReceived = 0;
+  let yearRefunded = 0;
+  const flushYear = () => {
+    if (!year) return;
+    out.push([`Total ${year}`, round2_(yearReceived), round2_(yearRefunded), round2_(yearReceived - yearRefunded)]);
+  };
+  keys.forEach((key) => {
+    const currentYear = key.slice(0, 4);
+    if (year && currentYear !== year) flushYear();
+    if (currentYear !== year) {
+      year = currentYear;
+      yearReceived = 0;
+      yearRefunded = 0;
+    }
+    const item = months[key];
+    yearReceived += item.received;
+    yearRefunded += item.refunded;
+    out.push([monthLabel_(key), round2_(item.received), round2_(item.refunded), round2_(item.received - item.refunded)]);
+  });
+  flushYear();
+  let totalReceived = 0;
+  let totalRefunded = 0;
+  keys.forEach((key) => {
+    totalReceived += months[key].received;
+    totalRefunded += months[key].refunded;
+  });
+  if (keys.length) {
+    out.push(["Total général", round2_(totalReceived), round2_(totalRefunded), round2_(totalReceived - totalRefunded)]);
+  }
+  const last = sheet.getLastRow();
+  if (out.length) {
+    sheet.getRange(4, 1, out.length, SUMMARY_HEADERS.length).setValues(out);
+    sheet.getRange(4, 2, out.length, 3).setNumberFormat("0.00");
+  }
+  if (last > out.length + 3) {
+    sheet.getRange(out.length + 4, 1, last - out.length - 3, SUMMARY_HEADERS.length).clearContent();
+  }
+  [220, 160, 160, 160].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+}
+
+/** Fiches suivies : le registre durable, indépendant des propriétés du script. */
+function writeFilesRows_(sheet, files) {
+  const rows = files.map((file) => [
+    file.fileId, file.date ? sheetDate_(file.date) : "", file.walk, file.slot, todayParis_(), file.state || "Lue",
+  ]);
+  const last = sheet.getLastRow();
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, FILES_HEADERS.length).setValues(rows);
+    sheet.getRange(2, 2, rows.length, 1).setNumberFormat("dd/mm/yyyy");
+  }
+  if (last > rows.length + 1) {
+    sheet.getRange(rows.length + 2, 1, last - rows.length - 1, FILES_HEADERS.length).clearContent();
+  }
+  [260, 120, 260, 130, 120, 120].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+}
+
+/** Signalements : rien n’est effacé, un problème résolu passe simplement à « Réglé ». */
+function writeAlerts_(sheet, alerts) {
+  const existing = readTabRows_(sheet, ALERT_HEADERS.length);
+  const keyOf = (row) => `${row[0]}|${row[1]}|${row[2]}`;
+  const open = {};
+  alerts.forEach((alert) => { open[`${alert.kind}|${alert.target}|${alert.detail}`] = true; });
+  const rows = existing.map((row) => [
+    row[0], row[1], row[2], row[3], open[keyOf(row)] ? ALERT_OPEN : ALERT_CLOSED,
+  ]);
+  alerts.forEach((alert) => {
+    const key = `${alert.kind}|${alert.target}|${alert.detail}`;
+    if (!rows.some((row) => keyOf(row) === key)) {
+      rows.push([alert.kind, alert.target, alert.detail, sheetDate_(todayParis_()), ALERT_OPEN]);
+    }
+  });
+  const last = sheet.getLastRow();
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, ALERT_HEADERS.length).setValues(rows);
+    sheet.getRange(2, 4, rows.length, 1).setNumberFormat("dd/mm/yyyy");
+  }
+  if (last > rows.length + 1) {
+    sheet.getRange(rows.length + 2, 1, last - rows.length - 1, ALERT_HEADERS.length).clearContent();
+  }
+  [200, 200, 420, 130, 100].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+}
+
+/** Lignes d’un onglet (hors ligne de titres). */
+function readTabRows_(sheet, width) {
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  return sheet.getRange(2, 1, last - 1, width).getValues()
+    .filter((row) => row.some((cell) => String(cell == null ? "" : cell).trim() !== ""));
+}
+
+/** Écrit des lignes simples (impayés) à partir de la ligne 2. */
+function writeSimpleRows_(sheet, rows) {
+  const last = sheet.getLastRow();
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, UNPAID_HEADERS.length).setValues(rows);
+    sheet.getRange(2, 4, rows.length, 1).setNumberFormat("dd/mm/yyyy");
+    sheet.getRange(2, 5, rows.length, 3).setNumberFormat("0.00");
+  }
+  if (last > rows.length + 1) {
+    sheet.getRange(rows.length + 2, 1, last - rows.length - 1, UNPAID_HEADERS.length).clearContent();
+  }
+  [150, 220, 260, 120, 140, 150, 150, 110].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+}
+
+/* ------------------------------------------------------------------ */
+/* Outils du suivi comptable                                          */
+/* ------------------------------------------------------------------ */
+
+/** Une cellule vide : le vide ou le null — jamais le 0 saisi volontairement. */
+function isEmptyCell_(value) {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  return false;
+}
+
+/** Montant saisi : nombre, ou texte « 15,50 ». */
+function parseAmount_(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const text = String(value == null ? "" : value).trim().replace(",", ".");
+  if (!text) return null;
+  const amount = Number(text);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+/** Date d’un mouvement : date de la fiche, ou texte « 14/11/2026 ». */
+function parseSheetDate_(value) {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  const text = String(value == null ? "" : value).trim();
+  if (!text) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12, 0, 0);
+  const french = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text);
+  if (french) return new Date(Number(french[3]), Number(french[2]) - 1, Number(french[1]), 12, 0, 0);
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** Date au format court (AAAA-MM-JJ). */
+function isoOf_(value) {
+  const date = parseSheetDate_(value);
+  if (!date) return "";
+  return Utilities.formatDate(date, TIME_ZONE, "yyyy-MM-dd");
+}
+
+function monthKey_(date) {
+  return Utilities.formatDate(date, TIME_ZONE, "yyyy-MM");
+}
+
+function monthLabel_(key) {
+  const parts = key.split("-");
+  const month = MONTHS[Number(parts[1]) - 1] || parts[1];
+  return `${month} ${parts[0]}`;
+}
+
+function round2_(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+/* ------------------------------------------------------------------ */
 /* Compteurs (places réservées par date)                              */
 /* ------------------------------------------------------------------ */
 
-function readVisitRows_(sheet) {
+/** Participants d’une fiche, avec leur numéro de ligne (suivi stable). */
+function readVisitEntries_(sheet) {
   const last = sheet.getLastRow();
   if (last < VISIT_FIRST_ROW) return [];
-  return sheet.getRange(VISIT_FIRST_ROW, 1, last - VISIT_FIRST_ROW + 1, VISIT_HEADERS.length).getValues()
-    .filter((row) => row.some((cell) => String(cell).trim() !== ""));
+  const rows = sheet.getRange(VISIT_FIRST_ROW, 1, last - VISIT_FIRST_ROW + 1, VISIT_HEADERS.length).getValues();
+  const entries = [];
+  rows.forEach((values, index) => {
+    if (!isParticipantRow_(values)) return;
+    entries.push({ row: VISIT_FIRST_ROW + index, values: values });
+  });
+  return entries;
+}
+
+/** Une ligne compte si elle a une référence, un nom ou des personnes. */
+function isParticipantRow_(values) {
+  if (String(values[0] == null ? "" : values[0]).trim() !== "") return true;
+  if (String(values[1] == null ? "" : values[1]).trim() !== "") return true;
+  if (Number(values[VISIT_COL.people - 1]) > 0) return true;
+  return false;
+}
+
+function readVisitRows_(sheet) {
+  return readVisitEntries_(sheet).map((entry) => entry.values);
 }
 
 /** Toute ligne avec un nombre de personnes occupe des places, sauf si elle est « Annulée ». */
@@ -1101,6 +1850,8 @@ function pruneProperties_() {
     // Le repère quotidien reste unique ; les comptes rendus sont oubliés après
     // 30 jours, quand leur date est passée et ne peut donc plus être envoyée.
     if (key === "mail:daily") return;
+    // Réglages et repères du suivi comptable : jamais effacés par le nettoyage.
+    if (key === "ACCOUNTING_ID" || key === "GUIDE_PHONE" || key === "accounting:run") return;
     if (key.indexOf("mail:visit:") === 0) {
       if (stored[key] < keepFrom) store.deleteProperty(key);
       return;
@@ -1221,6 +1972,20 @@ function phoneCell_(phone) {
 
 function isValidEmail_(email) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/**
+ * Numéro de téléphone : formats français (06 12 34 56 78, 01 42 68 53 00) et
+ * internationaux (+33 6 12 34 56 78, 0033…). On refuse l’absence et l’incomplet.
+ */
+function isValidPhone_(phone) {
+  const text = String(phone || "").trim();
+  if (!text) return false;
+  if (!/^[0-9+ ().\-\/]+$/.test(text)) return false;
+  const digits = text.replace(/\D/g, "");
+  if (digits.length < 9 || digits.length > 15) return false;
+  if (/^0+$/.test(digits)) return false;
+  return true;
 }
 
 function validateAgeGroups_(value, participants, capacity) {

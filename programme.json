@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "capacity": 20,
+  "capacity": 25,
   "prices": {
     "standard": 15,
     "youth": 12,

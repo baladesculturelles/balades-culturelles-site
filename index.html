@@ -70,7 +70,7 @@
             <span class="hero-caption-kicker">Le plaisir de flâner</span>
             <p>Lever les yeux.<br><em>Découvrir la ville autrement.</em></p>
           </div>
-          <div class="hero-seal" aria-hidden="true"><span>PARIS</span><b>à pied</b><span>ÎLE-DE-FRANCE</span></div>
+          <div class="hero-seal"><img src="assets/logo.png" width="132" height="132" alt="Logo Balades Culturelles, Paris – Île-de-France"></div>
         </div>
       </section>
 
@@ -80,7 +80,7 @@
           <span class="strip-divider" aria-hidden="true">✳</span>
           <div class="strip-fact"><strong>10 h 30–12 h</strong><span>samedi &amp; dimanche</span></div>
           <span class="strip-divider" aria-hidden="true">✳</span>
-          <div class="strip-fact"><strong>20 personnes</strong><span>maximum par séance</span></div>
+          <div class="strip-fact"><strong>25 personnes</strong><span>maximum par séance</span></div>
         </div>
       </div>
 
@@ -107,25 +107,20 @@
               <p>En famille, avec une classe, entre amis ou avec votre équipe&nbsp;: choisissez un quartier ou un monument, et construisons la balade ensemble.</p>
               <a href="#contact" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Une balade privée ou de groupe">Parler de votre projet <span aria-hidden="true">↗</span></a>
             </div>
-            <figure class="on-demand-photo"><img src="assets/details.jpg" alt="Détail sculpté d’une porte ancienne, témoin des histoires inscrites dans la ville." loading="lazy"><figcaption>Prendre le temps de regarder autrement.</figcaption></figure>
+            <figure class="on-demand-photo"><img src="assets/walk-bridges.jpg" alt="Illustration d’un pont piétonnier au-dessus de la Seine, avec les façades de Paris en arrière-plan." loading="lazy"><figcaption>Prendre le temps de regarder autrement.</figcaption></figure>
           </div>
 
-          <p class="inspiration-label">Trois inspirations à parcourir</p>
-          <div class="inspiration-grid" aria-label="Quelques idées de balades à la demande">
-            <article class="inspiration-card">
-              <a class="inspiration-image" href="#contact" aria-label="Imaginer une balade autour des ponts de Paris" data-interest="Je souhaite organiser une balade à la demande" data-walk="Les ponts de Paris"><img src="assets/walk-bridges.jpg" alt="Illustration générée d’un pont piétonnier au-dessus de la Seine, avec les façades de Paris en arrière-plan." loading="lazy"><span>01</span></a>
-              <div class="inspiration-card-copy"><p class="inspiration-kicker">Paris · patrimoine &amp; perspectives</p><h3>Les ponts de Paris</h3><p>Suivez la Seine d’une rive à l’autre et découvrez comment les ponts relient les quartiers tout en ouvrant de nouveaux points de vue sur la ville.</p><a class="inspiration-cta" href="#contact" data-interest="Je souhaite organiser une balade à la demande" data-walk="Les ponts de Paris">Imaginer cette balade <span aria-hidden="true">↗</span></a></div>
-            </article>
-            <article class="inspiration-card">
-              <a class="inspiration-image" href="#contact" aria-label="Imaginer une balade à Montmartre" data-interest="Je souhaite organiser une balade à la demande" data-walk="Montmartre"><img src="assets/walk-montmartre.jpg" alt="Illustration générée d’une rue en pente inspirée de Montmartre, bordée de maisons anciennes." loading="lazy"><span>02</span></a>
-              <div class="inspiration-card-copy"><p class="inspiration-kicker">Montmartre · quartier &amp; récits</p><h3>Montmartre, à votre rythme</h3><p>Prenez le temps de parcourir ce quartier, d’en observer les détails et d’écouter les histoires qui lui donnent son caractère singulier.</p><a class="inspiration-cta" href="#contact" data-interest="Je souhaite organiser une balade à la demande" data-walk="Montmartre">Imaginer cette balade <span aria-hidden="true">↗</span></a></div>
-            </article>
-            <article class="inspiration-card">
-              <a class="inspiration-image" href="#contact" aria-label="Imaginer une balade sur les traces du Paris gallo-romain" data-interest="Je souhaite organiser une balade à la demande" data-walk="Le Paris gallo-romain"><img src="assets/walk-antique.jpg" alt="Illustration générée de vestiges de pierre dans une cour parisienne, évocation des origines antiques de la ville." loading="lazy"><span>03</span></a>
-              <div class="inspiration-card-copy"><p class="inspiration-kicker">Paris · aux origines de la ville</p><h3>Le Paris gallo-romain</h3><p>Remontez aux origines de la capitale et partez à la recherche des traces gallo-romaines qui se mêlent encore au Paris d’aujourd’hui.</p><a class="inspiration-cta" href="#contact" data-interest="Je souhaite organiser une balade à la demande" data-walk="Le Paris gallo-romain">Imaginer cette balade <span aria-hidden="true">↗</span></a></div>
-            </article>
-          </div>
           <p class="image-credit">Images d’illustration générées pour accompagner ces idées de promenade.</p>
+          <div class="inspiration-head">
+            <p class="inspiration-label">Les prochaines balades publiques</p>
+            <div class="inspiration-nav">
+              <button class="inspiration-nav-button" type="button" data-inspiration-prev aria-label="Voir les balades précédentes" disabled>←</button>
+              <button class="inspiration-nav-button" type="button" data-inspiration-next aria-label="Voir les balades suivantes">→</button>
+            </div>
+          </div>
+          <div class="inspiration-track" id="inspiration-track" role="list" aria-label="Prochaines balades publiques, dans l’ordre des dates" tabindex="0"></div>
+          <p class="inspiration-hint">Faites glisser vers la droite ou utilisez les flèches pour découvrir les autres dates. <a href="#programme">Voir tout le programme</a></p>
+          <noscript><p class="inspiration-hint"><a href="#programme">Voir le programme des balades publiques</a></p></noscript>
           <div class="topic-heading"><span>À chacun son Paris</span><p>Quartiers, architecture, jardins et promenades.</p></div>
           <div class="topic-columns">
             <article class="topic-group" id="idees-quartiers">
@@ -340,21 +335,19 @@
       <section class="guide section-space" id="guide" aria-labelledby="guide-title">
         <div class="guide-layout section-shell">
           <div class="guide-visual">
-            <img class="guide-photo" src="assets/details.jpg" alt="Ornement sculpté sur une porte ancienne, détail d’architecture à observer en promenade." loading="lazy">
+            <img class="guide-photo" src="assets/facade.jpg" alt="Façade art nouveau aux balcons de fer forgé, porte sculptée et groupe de promeneurs, à observer en promenade." loading="lazy">
             <div class="guide-photo-note"><span>UN REGARD ATTENTIF</span><b>sur les petites histoires</b></div>
             <img class="guide-portrait" src="assets/marie-tiyi.jpg" alt="Portrait de Marie-Tiyi Jalon, votre guide." loading="lazy">
           </div>
           <div class="guide-copy">
             <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> Votre guide</p>
-            <h2 id="guide-title">Marie-Tiyi Jalon,<br><em>animatrice culturelle &amp; conteuse.</em></h2>
-            <p class="guide-lead">Après des études d’histoire et de géographie, une formation en sculpture et 25 ans d’enseignement, j’ai créé Balades Culturelles pour unir la marche, la contemplation et la joie de la découverte.</p>
-            <p class="guide-lead">Mes promenades font découvrir les monuments, les paysages et les petites histoires de Paris dans une ambiance agréable, où l’on apprend sans se prendre au sérieux.</p>
-            <blockquote class="guide-quote">« Une ville se comprend aussi par les détails que l’on prend le temps de regarder. »</blockquote>
-            <ul class="guide-principles">
-              <li><span>01</span> Histoire, géographie et regard artistique</li>
-              <li><span>02</span> Nature, patrimoine et histoires secrètes</li>
-              <li><span>03</span> Des visites à pied, à votre rythme</li>
-            </ul>
+            <h2 id="guide-title">Marie-Tiyi Jalon</h2>
+            <p class="guide-subtitle">Animatrice culturelle et conteuse d’histoires</p>
+            <p class="guide-lead">Je suis animatrice culturelle et conteuse d’histoires.</p>
+            <p class="guide-lead">Après des études d’histoire et de géographie, alliées à une formation de sculptrice et 25 ans d’enseignement, je crée mon entreprise pour proposer des balades culturelles, permettant d’allier la marche, la contemplation et la joie de la découverte.</p>
+            <p class="guide-lead">Rejoignez-moi pour une balade culturelle guidée à la découverte des trésors cachés de Paris et de l’Ile-de-France.</p>
+            <p class="guide-lead">Mes balades culturelles guidées vous permettront de découvrir des petites histoires dans la Grande, d’admirer des monuments et paysages, le nez au vent, dans une ambiance agréable où on apprend sans se prendre au sérieux.</p>
+            <p class="guide-lead">En complément des visites guidées publiques, il est aussi possible de privatiser une visite (pour une sortie scolaire, une fête de famille, un temps entre amis, un rallye, une journée d’entreprise, un anniversaire ou toute autre occasion)</p>
             <a class="button button-outline" href="#contact" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Une balade privée ou de groupe">Organiser une sortie privée <span class="button-arrow" aria-hidden="true">↗</span></a>
           </div>
         </div>
@@ -387,7 +380,7 @@
               <span class="practical-index">03 / INSCRIPTION</span>
               <h3>Avant le départ</h3>
               <p>Le lieu de rendez-vous est communiqué à l’inscription. Règlement par Wero 48&nbsp;h avant la balade ou en espèces le jour même.</p>
-              <p class="practical-reminder"><span aria-hidden="true">✳</span> 20 personnes maximum par visite publique.</p>
+              <p class="practical-reminder"><span aria-hidden="true">✳</span> 25 personnes maximum par visite publique.</p>
             </article>
           </div>
         </div>
@@ -407,7 +400,7 @@
               </div>
               <div class="booking-fact">
                 <span class="booking-fact-number" aria-hidden="true">02</span>
-                <div><strong>Visites en petit groupe</strong><p>20 personnes maximum, enfants compris.</p></div>
+                <div><strong>Visites en petit groupe</strong><p>25 personnes maximum, enfants compris.</p></div>
               </div>
               <div class="booking-fact">
                 <span class="booking-fact-number" aria-hidden="true">03</span>
@@ -461,21 +454,21 @@
                 <legend>Nombre de personnes par tarif</legend>
                 <p class="age-groups-intro">Indiquez uniquement les quantités : aucun nom ni âge exact n’est demandé.</p>
                 <div class="age-group-grid">
-                  <label for="age-standard"><span>Plein tarif</span><small>26 ans et plus · 15&nbsp;€</small><input id="age-standard" name="age_standard" type="number" min="0" max="20" step="1" inputmode="numeric" value="0" data-age-group="standard"></label>
-                  <label for="age-youth"><span>Jeunes de 15 à 25 ans</span><small>12&nbsp;€</small><input id="age-youth" name="age_youth" type="number" min="0" max="20" step="1" inputmode="numeric" value="0" data-age-group="youth"></label>
-                  <label for="age-child"><span>Enfants de 5 à 14 ans</span><small>8&nbsp;€</small><input id="age-child" name="age_child" type="number" min="0" max="20" step="1" inputmode="numeric" value="0" data-age-group="child"></label>
-                  <label for="age-under-five"><span>Moins de 5 ans</span><small>Gratuit</small><input id="age-under-five" name="age_under_five" type="number" min="0" max="20" step="1" inputmode="numeric" value="0" data-age-group="underFive"></label>
+                  <label for="age-standard"><span>Plein tarif</span><small>26 ans et plus · 15&nbsp;€</small><input id="age-standard" name="age_standard" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="standard"></label>
+                  <label for="age-youth"><span>Jeunes de 15 à 25 ans</span><small>12&nbsp;€</small><input id="age-youth" name="age_youth" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="youth"></label>
+                  <label for="age-child"><span>Enfants de 5 à 14 ans</span><small>8&nbsp;€</small><input id="age-child" name="age_child" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="child"></label>
+                  <label for="age-under-five"><span>Moins de 5 ans</span><small>Gratuit</small><input id="age-under-five" name="age_under_five" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="underFive"></label>
                 </div>
                 <div class="booking-estimate" aria-live="polite">
                   <p><span>Total de participants</span><output id="participants-total" for="age-standard age-youth age-child age-under-five">0</output></p>
                   <p><span>Montant estimé</span><output id="booking-estimate" for="age-standard age-youth age-child age-under-five">—</output></p>
                 </div>
-                <p class="age-group-status" id="age-group-status" role="status" aria-live="polite">Le total inclut les enfants gratuits et ne peut dépasser 20 personnes ni les places restantes.</p>
+                <p class="age-group-status" id="age-group-status" role="status" aria-live="polite">Le total inclut les enfants gratuits et ne peut dépasser 25 personnes ni les places restantes.</p>
               </fieldset>
               <div class="form-row form-row-booking custom-booking-fields" id="custom-booking-fields" hidden>
                 <label for="date">Date souhaitée <span class="optional">(facultatif)</span><input id="date" name="date" type="date"></label>
                 <label for="slot">Créneau souhaité <span class="optional">(facultatif)</span><select id="slot" name="slot"><option>À convenir</option><option>10 h 30–12 h</option></select></label>
-                <label for="custom-participants">Nombre de personnes <span class="optional">(facultatif, 20 maximum)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="20" step="1" placeholder="2"></label>
+                <label for="custom-participants">Nombre de personnes <span class="optional">(facultatif, 25 maximum)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="25" step="1" placeholder="2"></label>
               </div>
               <p class="booking-capacity-note" id="session-status" role="status" aria-live="polite">Sélectionnez une balade et une date pour consulter les places disponibles.</p>
             </fieldset>
@@ -483,9 +476,10 @@
             <fieldset class="form-step form-step-contact">
               <legend><span class="form-step-number">03</span> Vos coordonnées</legend>
               <div class="form-row form-row-contact">
-                <label for="name">Votre nom <span aria-hidden="true">*</span><input id="name" name="name" autocomplete="name" placeholder="Camille Dupont" required></label>
+                <label for="first-name">Prénom <span aria-hidden="true">*</span><input id="first-name" name="first_name" autocomplete="given-name" placeholder="Camille" required></label>
+                <label for="last-name">Nom <span aria-hidden="true">*</span><input id="last-name" name="last_name" autocomplete="family-name" placeholder="Dupont" required></label>
                 <label for="email">Votre e-mail <span aria-hidden="true">*</span><input id="email" name="email" type="email" autocomplete="email" placeholder="camille@exemple.fr" required></label>
-                <label for="phone">Téléphone <span class="optional">(facultatif)</span><input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="06 12 34 56 78"></label>
+                <label for="phone">Téléphone <span aria-hidden="true">*</span><input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" required></label>
               </div>
               <label for="message">Un détail à partager <span class="optional">(facultatif)</span><textarea id="message" name="message" rows="3" placeholder="Une question ou une précision utile…"></textarea></label>
             </fieldset>
@@ -557,7 +551,7 @@
           <span class="brand-lockup"><strong>Balades <em>Culturelles</em></strong><small>Paris · Île-de-France</small></span>
         </a>
         <p>Le patrimoine, les paysages et les histoires — à pied.</p>
-        <div class="footer-meta"><span>© <span data-year>2026</span> Balades Culturelles</span><a href="#legal-mentions" data-legal-open="mentions">Mentions légales</a><a href="#legal-confidentialite" data-legal-open="confidentialite">Confidentialité</a><a href="mailto:balades.culturelles@gmail.com">Écrire à Marie-Tiyi <span aria-hidden="true">↗</span></a></div>
+        <div class="footer-meta"><span>© <span data-year>2026</span> Balades Culturelles</span><a href="#legal-mentions" data-legal-open="mentions">Mentions légales</a><a href="#legal-confidentialite" data-legal-open="confidentialite">Confidentialité</a><a href="mailto:balades.culturelles@gmail.com?subject=Message%20depuis%20le%20site%20Balades%20Culturelles&amp;body=Bonjour%20Marie-Tiyi%2C%0A%0A%28%C3%A9crivez%20ici%20votre%20message%29%0A%0AMerci%20et%20%C3%A0%20bient%C3%B4t%20%21">Écrire à Marie-Tiyi <span aria-hidden="true">↗</span></a></div>
       </div>
     </footer>
   </body>

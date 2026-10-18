@@ -2,7 +2,7 @@
 // les demandes sur mesure utilisent toujours le courriel.
 const CONTACT_EMAIL = "balades.culturelles@gmail.com";
 const PUBLIC_TOPIC = "Je souhaite réserver une balade publique";
-const MAX_CAPACITY = 20;
+const MAX_CAPACITY = 25;
 // URL de la Web App Apps Script (…/exec), pour la version GitHub Pages. Laisser vide avec le serveur Python local.
 const BOOKING_API_URL = "https://script.google.com/macros/s/AKfycbzo7ZZCjaeM2cOuqeLq08qfhwOBwKuCn2zWvHCXamJhlxy67ZM1or_glOYAkx32BKe4hA/exec";
 const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
@@ -28,6 +28,9 @@ const participantsTotalOutput = document.querySelector("#participants-total");
 const bookingEstimateOutput = document.querySelector("#booking-estimate");
 const ageGroupStatus = document.querySelector("#age-group-status");
 const submitButton = document.querySelector("#submit-booking");
+const firstNameInput = document.querySelector("#first-name");
+const lastNameInput = document.querySelector("#last-name");
+const phoneInput = document.querySelector("#phone");
 
 let availabilityLoaded = false;
 let availabilityRequest = null;
@@ -91,6 +94,103 @@ programCards.forEach((card) => {
   card.hidden = !hasUpcoming;
 });
 if (availableFilterButton) availableFilterButton.disabled = true;
+
+// ------------------------------------------------------------------ Les prochaines balades, en carrousel
+const inspirationTrack = document.querySelector("#inspiration-track");
+const inspirationPrevButton = document.querySelector("[data-inspiration-prev]");
+const inspirationNextButton = document.querySelector("[data-inspiration-next]");
+const inspirationCards = [];
+
+const escapeHtml = (value) => String(value ?? "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Une carte par date, dans l’ordre chronologique : les prochaines balades d’abord.
+function buildInspirationTrack() {
+  if (!inspirationTrack) return;
+  const liens = [...document.querySelectorAll("[data-program-date]")]
+    .filter((lien) => !lien.hidden)
+    .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
+  inspirationTrack.replaceChildren();
+  inspirationCards.length = 0;
+
+  liens.forEach((lien) => {
+    const date = lien.dataset.programDate || "";
+    const walk = lien.dataset.walk || "";
+    const slot = lien.dataset.slot || "";
+    const dateComplete = lien.dataset.fullDate || "";
+    const kind = lien.closest("[data-program-card]")?.querySelector(".program-kind")?.textContent?.trim() || "";
+    const jour = lien.querySelector(".program-date-day")?.textContent?.trim() || "";
+    const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
+    const mois = lien.querySelector(".program-date-month")?.textContent?.trim() || "";
+
+    const carte = document.createElement("article");
+    carte.className = "next-card";
+    carte.setAttribute("role", "listitem");
+
+    const lienCarte = document.createElement("a");
+    lienCarte.className = "next-card-link";
+    lienCarte.href = "#contact";
+    lienCarte.dataset.interest = PUBLIC_TOPIC;
+    lienCarte.dataset.walk = walk;
+    lienCarte.dataset.date = date;
+    lienCarte.dataset.slot = slot;
+    lienCarte.setAttribute("aria-label", `Réserver une place pour ${walk} le ${dateComplete}`);
+    lienCarte.innerHTML = `
+      <span class="next-card-date">
+        <span class="next-card-day">${escapeHtml(jour)}</span>
+        <span class="next-card-meta"><span class="next-card-weekday">${escapeHtml(weekday)}</span><span class="next-card-month">${escapeHtml(mois)}</span></span>
+      </span>
+      <span class="next-card-kind">${escapeHtml(kind)}</span>
+      <span class="next-card-title">${escapeHtml(walk)}</span>
+      <span class="next-card-places" data-next-places>Chargement…</span>
+      <span class="next-card-cta">Réserver cette date <span aria-hidden="true">↗</span></span>`;
+
+    carte.append(lienCarte);
+    inspirationTrack.append(carte);
+    inspirationCards.push({ carte, lien });
+  });
+
+  syncInspirationTrack();
+  updateInspirationButtons();
+}
+
+// Les places restantes suivent celles du programme.
+function syncInspirationTrack() {
+  inspirationCards.forEach(({ carte, lien }) => {
+    const source = lien.querySelector("[data-availability-label]");
+    const cible = carte.querySelector("[data-next-places]");
+    if (source && cible) cible.textContent = source.textContent;
+    const complet = lien.dataset.soldOut === "true";
+    carte.classList.toggle("is-sold-out", complet);
+    const lienCarte = carte.querySelector(".next-card-link");
+    if (lienCarte) {
+      lienCarte.dataset.soldOut = complet ? "true" : "";
+      lienCarte.setAttribute("aria-disabled", String(complet));
+    }
+  });
+}
+
+function updateInspirationButtons() {
+  if (!inspirationTrack) return;
+  const max = inspirationTrack.scrollWidth - inspirationTrack.clientWidth - 2;
+  if (inspirationPrevButton) inspirationPrevButton.disabled = inspirationTrack.scrollLeft <= 2;
+  if (inspirationNextButton) inspirationNextButton.disabled = inspirationTrack.scrollLeft >= max;
+}
+
+function scrollInspiration(direction) {
+  if (!inspirationTrack) return;
+  const carte = inspirationTrack.querySelector(".next-card");
+  if (!carte) return;
+  const ecart = parseFloat(window.getComputedStyle(inspirationTrack).columnGap || "13") || 13;
+  const pas = carte.getBoundingClientRect().width + ecart;
+  inspirationTrack.scrollBy({ left: direction * pas, behavior: "smooth" });
+}
+
+buildInspirationTrack();
+if (inspirationPrevButton) inspirationPrevButton.addEventListener("click", () => scrollInspiration(-1));
+if (inspirationNextButton) inspirationNextButton.addEventListener("click", () => scrollInspiration(1));
+if (inspirationTrack) inspirationTrack.addEventListener("scroll", updateInspirationButtons, { passive: true });
+window.addEventListener("resize", updateInspirationButtons);
 
 function isPublicBooking() {
   return topicSelect?.value === PUBLIC_TOPIC;
@@ -400,6 +500,7 @@ function updateProgramAvailability() {
   });
   if (availableFilterButton) availableFilterButton.disabled = !availabilityLoaded;
   applyProgramFilters();
+  syncInspirationTrack();
 }
 
 function renderAvailability(payload) {
@@ -529,6 +630,20 @@ function updateFormStatus(message, state = "info") {
   else delete formStatus.dataset.state;
 }
 
+// Un champ rempli uniquement d'espaces ne compte pas comme une saisie.
+const cleanField = (value) => String(value || "").trim().replace(/\s+/g, " ");
+
+// Formats français (06 12 34 56 78) et internationaux (+33 6 12 34 56 78).
+const PHONE_ALLOWED = /^[0-9+ ().\-\/]+$/;
+function validPhone(value) {
+  const text = cleanField(value);
+  if (!text || !PHONE_ALLOWED.test(text)) return false;
+  const digits = text.replace(/\D/g, "");
+  if (digits.length < 9 || digits.length > 15) return false;
+  if (/^0+$/.test(digits)) return false;
+  return true;
+}
+
 if (contactForm) {
   contactForm.querySelectorAll("input, textarea").forEach((field) => field.addEventListener("input", () => {
     if (["error", "success"].includes(formStatus?.dataset.state)) updateFormStatus("");
@@ -564,11 +679,32 @@ async function submitPublicBooking(values) {
     return;
   }
 
-  const name = String(values.get("name") || "").trim();
-  const email = String(values.get("email") || "").trim();
-  const phone = String(values.get("phone") || "").trim();
+  const firstName = cleanField(values.get("first_name"));
+  const lastName = cleanField(values.get("last_name"));
+  const email = cleanField(values.get("email"));
+  const phone = cleanField(values.get("phone"));
   const message = String(values.get("message") || "").trim();
-  if (!name || !email) return;
+  if (!firstName) {
+    updateFormStatus("Indiquez votre prénom.", "error");
+    firstNameInput?.focus();
+    return;
+  }
+  if (!lastName) {
+    updateFormStatus("Indiquez votre nom.", "error");
+    lastNameInput?.focus();
+    return;
+  }
+  if (!phone) {
+    updateFormStatus("Indiquez votre numéro de téléphone : il permet de vous joindre le jour de la balade.", "error");
+    phoneInput?.focus();
+    return;
+  }
+  if (!validPhone(phone)) {
+    updateFormStatus("Ce numéro de téléphone semble incomplet. Exemple : 06 12 34 56 78.", "error");
+    phoneInput?.focus();
+    return;
+  }
+  if (!email) return;
 
   if (submitButton) submitButton.disabled = true;
   updateFormStatus("Enregistrement de votre réservation…", "pending");
@@ -579,7 +715,10 @@ async function submitPublicBooking(values) {
       headers: BOOKING_API_URL
         ? { "Content-Type": "text/plain;charset=utf-8" }
         : { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ session_id: session.id, name, email, phone, message, participants, age_groups: ageGroups }),
+      body: JSON.stringify({
+        session_id: session.id, first_name: firstName, last_name: lastName,
+        email, phone, message, participants, age_groups: ageGroups,
+      }),
     });
     const result = await response.json();
     if (!response.ok || result.error) {
@@ -606,14 +745,35 @@ function submitCustomRequest(values) {
     updateFormStatus("Le formulaire est prêt, mais son envoi n’est pas configuré. Renseignez l’adresse de réception dans script.js avant la mise en ligne.", "error");
     return;
   }
-  const name = String(values.get("name") || "").trim();
-  const email = String(values.get("email") || "").trim();
+  const firstName = cleanField(values.get("first_name"));
+  const lastName = cleanField(values.get("last_name"));
+  const email = cleanField(values.get("email"));
   const topic = String(values.get("topic") || "").trim();
   const date = String(values.get("date") || "").trim();
   const participants = String(values.get("custom_participants") || "").trim();
   const slot = String(values.get("slot") || "").trim();
   const message = String(values.get("message") || "").trim();
-  const phone = String(values.get("phone") || "").trim();
+  const phone = cleanField(values.get("phone"));
+  if (!firstName) {
+    updateFormStatus("Indiquez votre prénom.", "error");
+    firstNameInput?.focus();
+    return;
+  }
+  if (!lastName) {
+    updateFormStatus("Indiquez votre nom.", "error");
+    lastNameInput?.focus();
+    return;
+  }
+  if (!phone) {
+    updateFormStatus("Indiquez votre numéro de téléphone : il permet de vous joindre le jour de la balade.", "error");
+    phoneInput?.focus();
+    return;
+  }
+  if (!validPhone(phone)) {
+    updateFormStatus("Ce numéro de téléphone semble incomplet. Exemple : 06 12 34 56 78.", "error");
+    phoneInput?.focus();
+    return;
+  }
   if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > MAX_CAPACITY)) {
     updateFormStatus(`Une visite est limitée à ${MAX_CAPACITY} personnes. Indiquez un nombre inférieur ou égal, ou contactez Marie-Tiyi.`, "error");
     customParticipantsInput?.focus();
@@ -623,7 +783,7 @@ function submitCustomRequest(values) {
   const body = encodeURIComponent([
     "Bonjour Marie-Tiyi,",
     "",
-    `Je m’appelle ${name}.`,
+    `Je m’appelle ${firstName} ${lastName}.`,
     `Mon adresse e-mail : ${email}`,
     phone ? `Mon téléphone : ${phone}` : "",
     `Mon projet : ${topic}`,
