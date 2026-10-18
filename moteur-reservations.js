@@ -19,8 +19,8 @@
  * que vous suivez vos participants (colonne « Étape ») ; le tableau de bord se met
  * à jour à chaque réservation et toutes les 15 minutes.
  *
- * Chaque réservation confirmée envoie un e-mail au client depuis votre boîte, avec
- * une copie pour vous (nécessite l’autorisation « script.send_email » : voir README.md).
+ * Chaque réservation confirmée envoie un e-mail au client depuis votre boîte, sans copie ;
+ * un récapitulatif quotidien séparé pour vous (autorisation « script.send_mail »).
  *
  * Mise en route : exécutez une fois la fonction « installer », puis déployez le
  * projet en application Web (voir README.md).
@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "9fbbe0a3dc";
+const ENGINE_VERSION = "6d6b3291ff";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -93,7 +93,7 @@ const DASHBOARD_HEADERS = Object.freeze([
 ]);
 const JOURNAL_HEADERS = Object.freeze([
   "Réservée le", "Date de la balade", "Balade", "Horaire", "Référence", "Nom", "E-mail", "Téléphone",
-  "Personnes", "Montant estimé (€)", "Fiche de la date",
+  "Personnes", "Montant estimé (€)", "Fiche de la date", "Message du client",
 ]);
 
 // Programme lu pendant l’exécution en cours (chaque appel au script repart de zéro).
@@ -142,7 +142,10 @@ function synchroniser() {
   const done = withLock_(10000, () => {
     pruneProperties_();
     refreshUpcomingStats_();
-    writeDashboard_(getDashboard_(getRootFolder_()));
+    const dashboard = getDashboard_(getRootFolder_());
+    writeDashboard_(dashboard);
+    sendDailySummary_(dashboard);
+    sendVisitReports_();
     return true;
   }, { optional: true });
   if (!done) return "Une réservation était en cours : nouvelle mise à jour au prochain passage.";
@@ -442,7 +445,7 @@ function createBooking_(payload) {
     // ne doit pas la faire échouer (la synchronisation suivante rattrapera).
     try {
       addJournalRow_(dashboard, session, visit.getUrl(), {
-        createdAt, reference, name, email, phone, participants, priceEstimate,
+        createdAt, reference, name, email, phone, participants, priceEstimate, message,
       });
       writeDashboard_(dashboard);
     } catch (error) {
@@ -761,6 +764,7 @@ function writeDashboard_(dashboard) {
 
 function addJournalRow_(dashboard, session, visitUrl, booking) {
   const sheet = dashboard.getSheetByName(JOURNAL_SHEET) || dashboard.insertSheet(JOURNAL_SHEET);
+  sheet.getRange(1, 1, 1, JOURNAL_HEADERS.length).setValues([JOURNAL_HEADERS.slice()]);
   // La réservation la plus récente en haut.
   sheet.insertRowsAfter(1, 1);
   sheet.getRange(2, 1, 1, JOURNAL_HEADERS.length).setValues([[
@@ -775,6 +779,7 @@ function addJournalRow_(dashboard, session, visitUrl, booking) {
     booking.participants,
     booking.priceEstimate,
     `=HYPERLINK("${visitUrl}", "Ouvrir la fiche")`,
+    safeSheetText_(booking.message || ""),
   ]]).setFontWeight("normal").setFontColor("#242a23").setBackground(null);
   sheet.getRange(2, 1).setNumberFormat("dd/mm/yyyy hh:mm");
   sheet.getRange(2, 2).setNumberFormat("ddd dd/mm/yyyy");
@@ -785,7 +790,7 @@ function addJournalRow_(dashboard, session, visitUrl, booking) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Envoie la confirmation au client, avec une copie pour Marie-Tiyi.
+ * Envoie la confirmation au client uniquement.
  * Jamais d’erreur renvoyée : la réservation est déjà enregistrée à ce stade.
  */
 function sendConfirmationEmail_(booking) {
@@ -795,12 +800,120 @@ function sendConfirmationEmail_(booking) {
     MailApp.sendEmail(`${quoteName_(booking.name)} <${booking.email}>`, content.subject, content.text, {
       name: CONTACT_NAME,
       replyTo: to,
-      cc: to,
       htmlBody: content.html,
     });
   } catch (error) {
     console.error("E-mail de confirmation non envoyé pour " + booking.reference + " : " + error);
   }
+}
+
+/* Les deux tâches sont appelées sous le verrou commun aux réservations.
+ * MailApp et PropertiesService ne forment pas une transaction : un arrêt brutal
+ * entre l'envoi réussi et son enregistrement reste une limite de Google. */
+function sendOwnerEmail_(subject, text) {
+  MailApp.sendEmail(contactEmail_(), subject, text, {
+    name: CONTACT_NAME, replyTo: contactEmail_(),
+  });
+}
+
+/** Convertit une heure civile de Paris en instant, y compris en heure d’été. */
+function parisInstant_(iso, hour, minute) {
+  const target = Date.parse(`${iso}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`);
+  let instant = target;
+  for (let i = 0; i < 3; i += 1) {
+    const local = Utilities.formatDate(new Date(instant), TIME_ZONE, "yyyy-MM-dd'T'HH:mm:ss");
+    instant += target - Date.parse(local + "Z");
+  }
+  return instant;
+}
+
+function nextDay_(iso) {
+  return new Date(Date.parse(iso + "T12:00:00Z") + 86400000).toISOString().slice(0, 10);
+}
+
+/** Une seule petite propriété : référence du dernier journal envoyé et prochaine échéance.
+ * Le journal conserve les réservations même si une fiche est retirée du programme.
+ * Ne pas supprimer ses lignes : elles constituent l'historique des envois. */
+function sendDailySummary_(dashboard) {
+  try {
+    const store = props_();
+    const key = "mail:daily";
+    let checkpoint = JSON.parse(store.getProperty(key) || "null");
+    if (!checkpoint) {
+      checkpoint = { nextDue: parisInstant_(todayParis_(), 17, 0), lastRef: "" };
+      store.setProperty(key, JSON.stringify(checkpoint));
+    }
+    if (Date.now() < checkpoint.nextDue) return;
+    const journal = dashboard.getSheetByName(JOURNAL_SHEET);
+    const count = journal.getLastRow() - 1;
+    const rows = count > 0 ? journal.getRange(2, 1, count, JOURNAL_HEADERS.length).getValues().filter((row) => row[4]) : [];
+    const boundary = checkpoint.lastRef ? rows.findIndex((row) => row[4] === checkpoint.lastRef) : rows.length;
+    if (boundary < 0) throw new Error("La dernière référence envoyée manque dans le journal ; restaurer le journal avant de reprendre.");
+    const fresh = rows.slice(0, boundary);
+    if (!fresh.length) {
+      // Seule l’échéance change : la dernière réservation envoyée reste intacte.
+      checkpoint.nextDue = parisInstant_(nextDay_(todayParis_()), 17, 0);
+      store.setProperty(key, JSON.stringify(checkpoint));
+      return;
+    }
+    const text = ["Nouvelles réservations depuis le dernier récapitulatif réussi", ""];
+    fresh.slice().reverse().forEach((row) => {
+      const date = Utilities.formatDate(new Date(row[1]), TIME_ZONE, "yyyy-MM-dd");
+      let message = row[11];
+      // Anciennes réservations : le message n’était pas encore copié au journal.
+      if (!message) {
+        const record = parseVisit_(store.getProperty(propertyKey_("visit:", `${date}|${row[2]}|${row[3]}`)));
+        const visit = record && openIfAlive_(record.fileId);
+        const participant = visit && readVisitRows_(visitSheet_(visit)).find((item) => item[0] === row[4]);
+        message = participant ? participant[12] : "";
+      }
+      text.push(`${row[2]} — ${longFrenchDate_(date).toLowerCase()} — ${row[3]}`,
+        `Nom : ${row[5]}`, `E-mail : ${row[6]}`, `Téléphone : ${String(row[7]).replace(/^'/, "")}`,
+        `Personnes : ${row[8]}`, `Montant estimé : ${frenchAmount_(row[9])} €`,
+        `Message du client : ${message || "—"}`, `Référence : ${row[4]}`, "");
+    });
+    sendOwnerEmail_(`Nouvelles réservations — ${todayParis_()} (${fresh.length})`, text.join("\n"));
+    store.setProperty(key, JSON.stringify({ lastRef: fresh[0][4],
+      nextDue: parisInstant_(nextDay_(todayParis_()), 17, 0), sentAt: new Date().toISOString() }));
+  } catch (error) {
+    console.error("Récapitulatif quotidien non envoyé ou succès non enregistré : " + error);
+  }
+}
+
+/** Un compte rendu par créneau, retenté tant qu'il reste à venir. */
+function sendVisitReports_() {
+  getProgram_().sessions.forEach((session) => {
+    try {
+      const match = /^(\d{1,2})\s*(?:h|:)\s*(\d{2})?/.exec(session.slot);
+      if (!match) throw new Error("Horaire non reconnu : " + session.slot);
+      const start = parisInstant_(session.date, Number(match[1]), Number(match[2] || 0));
+      const now = Date.now();
+      if (now >= start || now < start - 48 * 3600000) return;
+      const key = propertyKey_("mail:visit:", session.id);
+      if (props_().getProperty(key)) return;
+      const record = parseVisit_(props_().getProperty(propertyKey_("visit:", session.id)));
+      const visit = record && openIfAlive_(record.fileId);
+      if (record && !visit) throw new Error("Fiche inaccessible : " + session.id);
+      const sheet = visit ? visitSheet_(visit) : null;
+      const rows = sheet ? readVisitRows_(sheet).filter((row) => String(row[10]).trim() !== CANCELLED && Number(row[4]) > 0) : [];
+      const stats = countStats_(rows);
+      const text = [session.walk, `${longFrenchDate_(session.date).toLowerCase()} — ${session.slot}`,
+        sheet ? meetingLine_(sheet) : MEETING_FALLBACK,
+        `Personnes : ${stats.booked}`, `Places restantes : ${Math.max(0, getProgram_().capacity - stats.booked)}`, "", "Participants non annulés", ""];
+      rows.forEach((row) => {
+        text.push(`Nom : ${row[1]}`, `E-mail : ${row[2]}`, `Téléphone : ${String(row[3]).replace(/^'/, "")}`,
+          `Personnes : ${row[4]}`, `Montant : ${frenchAmount_(row[9])} €`, `Étape : ${row[10]}`,
+          `Message du client : ${row[12] || "—"}`, `Référence : ${row[0]}`);
+        if (row[13]) text.push(`Vos notes : ${row[13]}`);
+        text.push("");
+      });
+      if (!rows.length) text.push("Aucun participant inscrit.");
+      sendOwnerEmail_(`Compte rendu — ${session.walk}, ${longFrenchDate_(session.date).toLowerCase()}`, text.join("\n"));
+      props_().setProperty(key, session.date);
+    } catch (error) {
+      console.error("Compte rendu non envoyé ou succès non enregistré pour " + session.id + " : " + error);
+    }
+  });
 }
 
 /** Adresse d’envoi et de réponse, modifiable dans les propriétés du script. */
@@ -985,6 +1098,13 @@ function pruneProperties_() {
   const store = props_();
   const stored = store.getProperties();
   Object.keys(stored).forEach((key) => {
+    // Le repère quotidien reste unique ; les comptes rendus sont oubliés après
+    // 30 jours, quand leur date est passée et ne peut donc plus être envoyée.
+    if (key === "mail:daily") return;
+    if (key.indexOf("mail:visit:") === 0) {
+      if (stored[key] < keepFrom) store.deleteProperty(key);
+      return;
+    }
     const isVisit = key.indexOf("visit:") === 0;
     const isStats = key.indexOf("stats:") === 0;
     if (!isVisit && !isStats) return;
