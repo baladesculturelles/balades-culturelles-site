@@ -115,6 +115,176 @@ function parisMoment(year, month, day, hour, minute) {
   return second === first ? result : guess - second;
 }
 
+// ------------------------------------------------------------------ Ajout au calendrier (après réservation)
+// Le fichier .ics est fabriqué dans le navigateur : aucun serveur, aucune donnée
+// supplémentaire. Il n'est proposé qu'APRÈS une réservation confirmée.
+// Le lieu de rendez-vous n'est pas encore connu : la ligne LOCATION n'est écrite
+// que si une location est fournie (attribut `data-location` à venir par balade).
+
+/** Découpe un créneau « 10 h 30–12 h » en heures et minutes. */
+function parseSlotRange(slot) {
+  const texte = String(slot || "").replace(/\u2013|\u2014/g, "-");
+  const lire = (morceau) => {
+    const resultat = morceau.trim().match(/^(\d{1,2})\s*(?:h|:)\s*(\d{2})?/i);
+    if (!resultat) return null;
+    const heure = Number(resultat[1]);
+    const minute = Number(resultat[2] || 0);
+    if (heure > 23 || minute > 59) return null;
+    return { heure, minute };
+  };
+  const [debut, fin] = texte.split("-");
+  const depart = lire(debut || "");
+  if (!depart) return null;
+  const arrivee = fin ? lire(fin) : null;
+  const finParDefaut = {
+    heure: Math.min(depart.heure + 1, 23),
+    minute: depart.minute === 0 ? 30 : 0,
+  };
+  return { depart, arrivee: arrivee || finParDefaut };
+}
+
+/** Échappe un texte pour un champ iCalendar (RFC 5545). */
+function icsEscape(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
+/**
+ * Replie les lignes au-delà de 75 OCTETS (RFC 5545, § 3.1).
+ * Le comptage se fait en UTF-8 : compter les caractères dépasserait la limite
+ * sur les accents (é, è, à pèsent 2 octets) présents partout dans les titres.
+ * Aucun caractère n'est coupé en deux, et chaque ligne de continuation commence
+ * par un espace, qui compte dans la limite.
+ */
+function icsFold(ligne) {
+  const octets = (texte) => {
+    if (typeof TextEncoder === "function") return new TextEncoder().encode(texte).length;
+    return unescape(encodeURIComponent(texte)).length;
+  };
+  if (octets(ligne) <= 75) return ligne;
+  const morceaux = [];
+  let courant = "";
+  let taille = 0;
+  let limite = 75;
+  for (const caractere of ligne) {
+    const poids = octets(caractere);
+    if (taille + poids > limite) {
+      morceaux.push(courant);
+      courant = "";
+      taille = 0;
+      limite = 74; // un espace de continuation s'ajoute devant
+    }
+    courant += caractere;
+    taille += poids;
+  }
+  if (courant) morceaux.push(courant);
+  return morceaux[0] + morceaux.slice(1).map((suite) => "\r\n " + suite).join("");
+}
+
+/** Horodatage UTC « YYYYMMDDTHHMMSSZ » à partir d'une heure murale de Paris. */
+function icsStamp(isoDate, heure, minute) {
+  const [annee, mois, jour] = String(isoDate).split("-").map(Number);
+  const instant = parisMoment(annee, mois, jour, heure, minute);
+  return new Date(instant).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+/**
+ * Construit le contenu d'un fichier .ics pour une réservation confirmée.
+ * @param {{walk: string, date: string, slot: string, reference?: string, participants?: number, location?: string}} reservation
+ * @returns {{contenu: string, nomFichier: string}}
+ */
+function buildCalendarFile(reservation) {
+  const walk = reservation.walk || "Balade culturelle";
+  const creneau = parseSlotRange(reservation.slot);
+  const [annee, mois, jour] = String(reservation.date).split("-").map(Number);
+  const lignes = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Balades Culturelles//Reservation//FR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${icsEscape(reservation.reference || `${reservation.date}-${walk}`)}@baladesculturelles`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")}`,
+  ];
+
+  let toutLaJournee = false;
+  if (creneau) {
+    lignes.push(`DTSTART:${icsStamp(reservation.date, creneau.depart.heure, creneau.depart.minute)}`);
+    lignes.push(`DTEND:${icsStamp(reservation.date, creneau.arrivee.heure, creneau.arrivee.minute)}`);
+  } else {
+    toutLaJournee = true;
+    const jourSuivant = new Date(Date.UTC(annee, mois - 1, jour + 1)).toISOString().slice(0, 10);
+    lignes.push(`DTSTART;VALUE=DATE:${reservation.date.replace(/-/g, "")}`);
+    lignes.push(`DTEND;VALUE=DATE:${jourSuivant.replace(/-/g, "")}`);
+  }
+
+  lignes.push(`SUMMARY:${icsEscape(`Balade culturelle — ${walk}`)}`);
+
+  const details = ["Votre réservation est confirmée."];
+  if (reservation.reference) details.push(`Référence : ${reservation.reference}.`);
+  if (reservation.participants) {
+    details.push(`${reservation.participants} personne${reservation.participants > 1 ? "s" : ""}.`);
+  }
+  details.push("Le lieu de rendez-vous vous est communiqué par e-mail avant la balade.");
+  lignes.push(`DESCRIPTION:${icsEscape(details.join("\n"))}`);
+
+  if (reservation.location) lignes.push(`LOCATION:${icsEscape(reservation.location)}`);
+
+  lignes.push("STATUS:CONFIRMED", "TRANSP:OPAQUE");
+  if (!toutLaJournee) {
+    lignes.push(
+      "BEGIN:VALARM",
+      "TRIGGER:-P1D",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${icsEscape(`Rappel : votre balade « ${walk} » a lieu demain.`)}`,
+      "END:VALARM"
+    );
+  }
+  lignes.push("END:VEVENT", "END:VCALENDAR");
+
+  return {
+    contenu: lignes.map(icsFold).join("\r\n") + "\r\n",
+    nomFichier: `balade-culturelle-${String(reservation.date || "").replace(/[^0-9-]/g, "")}.ics`,
+  };
+}
+
+const bookingCalendar = document.querySelector("#booking-calendar");
+const bookingCalendarText = document.querySelector("[data-calendar-text]");
+const bookingCalendarLink = document.querySelector("[data-calendar-download]");
+
+function hideCalendarLink() {
+  if (!bookingCalendar) return;
+  if (bookingCalendarLink) {
+    if (bookingCalendarLink.dataset.objectUrl) URL.revokeObjectURL(bookingCalendarLink.dataset.objectUrl);
+    delete bookingCalendarLink.dataset.objectUrl;
+    bookingCalendarLink.removeAttribute("href");
+  }
+  bookingCalendar.hidden = true;
+}
+
+/** Propose « Ajouter à mon agenda » une fois la réservation confirmée. */
+function showCalendarLink(reservation) {
+  if (!bookingCalendar || !bookingCalendarLink) return;
+  const { contenu, nomFichier } = buildCalendarFile(reservation);
+  const blob = new Blob([contenu], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  if (bookingCalendarLink.dataset.objectUrl) URL.revokeObjectURL(bookingCalendarLink.dataset.objectUrl);
+  bookingCalendarLink.dataset.objectUrl = url;
+  bookingCalendarLink.href = url;
+  bookingCalendarLink.setAttribute("download", nomFichier);
+  if (bookingCalendarText) {
+    bookingCalendarText.textContent = `${reservation.walk} — ${formatFrenchDate(reservation.date)}, ${reservation.slot}. Le fichier s'ouvre dans votre calendrier ; le lieu de rendez-vous vous sera envoyé par e-mail.`;
+  }
+  bookingCalendar.hidden = false;
+}
+
+// Point d'entrée pour les tests : vérifier le calcul d'heure (été / hiver).
+window.baladesCalendar = { parseSlotRange, buildCalendarFile };
+
 const localToday = () => {
   const parts = PARIS_FORMAT ? parisParts(Date.now()) : null;
   if (parts) return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
@@ -259,6 +429,26 @@ const inspirationPrevButton = document.querySelector("[data-inspiration-prev]");
 const inspirationNextButton = document.querySelector("[data-inspiration-next]");
 const inspirationCards = [];
 
+// Dimensions intrinsèques des photos du programme. Les attributs width/height
+// réservent la place avant le chargement (anti-CLS) sans imposer la hauteur :
+// le CSS et son aspect-ratio restent maîtres du cadrage.
+const WALK_IMAGE_SIZES = Object.freeze({
+  "walk-bridges": [1376, 768],
+  "walk-grands-magasins": [800, 907],
+  "walk-haussmann": [800, 500],
+  "walk-inde-paris": [800, 500],
+  "walk-la-defense": [800, 500],
+  "walk-moliere": [800, 854],
+  "walk-montparnasse": [800, 500],
+  "walk-montsouris": [800, 500],
+  "walk-nation-art-nouveau": [800, 500],
+  "walk-passages-couverts": [800, 500],
+  "walk-pere-lachaise": [800, 500],
+  "walk-philippe-auguste": [800, 500],
+  "walk-quartier-chinois": [800, 500],
+  "walk-tour-eiffel": [800, 500],
+});
+
 const escapeHtml = (value) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -304,17 +494,17 @@ function buildInspirationTrack() {
     const image = card.dataset.image || "";
     const imageAlt = card.dataset.imageAlt || walk;
     const imageStem = image.split("/").pop().replace(/\.jpg$/i, "");
+    const imageSize = WALK_IMAGE_SIZES[imageStem] || [800, 500];
     const imageWebp = imageStem
-      ? `<source type="image/webp" sizes="(max-width: 560px) 86vw, (max-width: 980px) 45vw, 380px" srcset="assets/responsive/${escapeHtml(imageStem)}-400.webp 400w, assets/responsive/${escapeHtml(imageStem)}-800.webp 800w">`
+      ? `<source type="image/webp" sizes="(max-width: 560px) 86vw, (max-width: 980px) 45vw, 380px" srcset="assets/responsive/${escapeHtml(imageStem)}-400.webp 400w, assets/responsive/${escapeHtml(imageStem)}-480.webp 480w, assets/responsive/${escapeHtml(imageStem)}-800.webp 800w">`
       : "";
     const summary = card.dataset.summary || "";
     const kind = card.querySelector(".program-kind")?.textContent?.trim() || "";
     const numero = String(index + 1).padStart(2, "0");
     const periode = formatWalkPeriod(liensDates);
 
-    const carte = document.createElement("article");
+    const carte = document.createElement("li");
     carte.className = "next-card";
-    carte.setAttribute("role", "listitem");
     carte.dataset.walk = walk;
 
     const datesHtml = liensDates.map((lien, idx) => {
@@ -333,7 +523,7 @@ function buildInspirationTrack() {
 
     carte.innerHTML = `
       <div class="next-card-media">
-        <picture>${imageWebp}<img class="next-card-image" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" loading="lazy" decoding="async"></picture>
+        <picture>${imageWebp}<img class="next-card-image" src="${escapeHtml(image)}" width="${imageSize[0]}" height="${imageSize[1]}" alt="${escapeHtml(imageAlt)}" loading="lazy" decoding="async"></picture>
         <span class="next-card-badge">${escapeHtml(numero)}</span>
         <span class="next-card-period">${escapeHtml(periode)}</span>
       </div>
@@ -1071,6 +1261,7 @@ async function submitPublicBooking(values) {
   if (!email) return;
 
   if (submitButton) submitButton.disabled = true;
+  hideCalendarLink();
   updateFormStatus("Enregistrement de votre réservation…", "pending");
   try {
     // Apps Script : text/plain évite le pré-vol CORS ; la réponse reste lisible en JSON.
@@ -1092,6 +1283,14 @@ async function submitPublicBooking(values) {
       return;
     }
     updateFormStatus(`Réservation confirmée pour ${result.walk}, le ${formatFrenchDate(result.date)} à ${result.slot} (${result.participants} personne${result.participants > 1 ? "s" : ""}, estimation ${result.price_estimate} €). Référence : ${result.reference}. Il reste ${result.remaining} place${result.remaining > 1 ? "s" : ""}. Un e-mail de confirmation vient de vous être envoyé : conservez votre référence, elle suffit pour annuler ou modifier.`, "success");
+    // « Ajouter à mon agenda » n'apparaît qu'après une réservation réellement confirmée.
+    showCalendarLink({
+      walk: result.walk,
+      date: result.date,
+      slot: result.slot,
+      reference: result.reference,
+      participants: result.participants,
+    });
     if (sessionSelect) sessionSelect.value = "";
     ageGroupInputs.forEach((input) => { input.value = "0"; });
     ageGroupsTouched = false;
@@ -1143,6 +1342,7 @@ async function submitCustomRequest(values) {
   if (!email) return;
 
   if (submitButton) submitButton.disabled = true;
+  hideCalendarLink();
   updateFormStatus("Envoi de votre demande…", "pending");
   try {
     const response = await fetch(ACTIVE_API_URL || "/api/bookings", {

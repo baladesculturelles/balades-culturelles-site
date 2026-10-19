@@ -269,7 +269,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .inspiration-nav-button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255,253,248,.32); border-radius: 50%; color: var(--white); background: transparent; font-size: 15px; line-height: 1; transition: background .2s ease, border-color .2s ease, opacity .2s ease; }
 .inspiration-nav-button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
 .inspiration-nav-button:disabled { opacity: .28; cursor: default; }
-.inspiration-track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 26px) / 3); gap: 13px; margin-bottom: 13px; padding-bottom: 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.inspiration-track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 26px) / 3); gap: 13px; margin: 0 0 13px; padding: 0 0 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; list-style: none; }
 .inspiration-track::-webkit-scrollbar { display: none; }
 .next-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,253,248,.19); background: rgba(255,253,248,.045); scroll-snap-align: start; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
 .next-card:hover { border-color: rgba(216,178,110,.7); background: rgba(255,253,248,.075); }
@@ -348,6 +348,22 @@ button, a { -webkit-tap-highlight-color: transparent; }
 
 /* Contact and reservation form */
 .contact-section { padding-block: clamp(70px, 9vw, 115px); color: var(--white); background: var(--forest-deep); }
+
+/* Dernière section : le navigateur saute son rendu tant qu’elle est hors écran.
+   contain-intrinsic-size réserve une hauteur proche de la hauteur réelle mesurée
+   (1 596 px à 1440 px de large, 2 700 px à 390 px) ; la variante `auto` mémorise
+   la hauteur exacte après le premier rendu.
+   Portée volontairement limitée à la DERNIÈRE section : la position d’une ancre
+   ne dépend que des sections qui la précèdent. Appliquer content-visibility à
+   #guide ou #infos-pratiques décalait les ancres suivantes de 195 px, car une
+   hauteur estimée ne peut pas suivre les variations réelles de 738 à 1 099 px
+   selon la largeur de la fenêtre. #programme reste exclu : son carrousel est
+   mesuré en JS (scrollWidth, largeur des cartes) et n’a pas de mise en page
+   tant qu’il n’est pas rendu. */
+.contact-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1596px;
+}
 .contact-layout { display: grid; grid-template-columns: .82fr 1.18fr; align-items: start; gap: clamp(42px, 7vw, 92px); }
 .contact-copy { padding-top: 14px; }
 .eyebrow-light { color: var(--gold); }
@@ -396,6 +412,16 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .button-submit { min-height: 45px; padding-block: 9px; color: var(--white); background: var(--forest); }
 .button-submit:hover { background: var(--forest-deep); }
 .button-submit .button-arrow { color: var(--forest); background: var(--gold); }
+/* « Ajouter à mon agenda » : visible seulement après une réservation confirmée. */
+.booking-calendar { margin: 20px 0 0; padding: 16px 18px 18px; border: 1px solid rgba(24,62,48,.18); border-left: 3px solid var(--moss); background: var(--paper-soft); }
+.booking-calendar-label { margin: 0 0 6px; color: var(--moss); font-size: 8.5px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+.booking-calendar-text { margin: 0 0 13px; color: #4e564d; font-size: 12px; line-height: 1.6; }
+.button-calendar { display: inline-flex; align-items: center; gap: 10px; padding: 11px 16px; border: 1px solid var(--forest); color: var(--forest); background: transparent; font-size: 11px; font-weight: 750; cursor: pointer; transition: background .2s ease, color .2s ease; }
+.button-calendar:hover { color: var(--white); background: var(--forest); }
+.button-calendar span { color: var(--clay); font-size: 14px; }
+.button-calendar:hover span { color: var(--gold); }
+@media (max-width: 560px) { .booking-calendar { padding: 14px 15px 16px; } .button-calendar { width: 100%; justify-content: center; } }
+
 .form-hint { max-width: 390px; margin: 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
 .form-status { min-height: 0; margin: -2px 0 0; color: var(--forest); font-size: 11px; line-height: 1.55; }
 .form-status:empty { display: none; }

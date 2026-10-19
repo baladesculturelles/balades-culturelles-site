@@ -10,11 +10,28 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Balades Culturelles — Balades à Paris et en Île-de-France">
     <meta property="og:description" content="Des promenades culturelles à Paris et en Île-de-France avec Marie-Tiyi Jalon.">
+    <meta property="og:url" content="https://baladesculturelles.github.io/balades-culturelles-site/">
+    <meta property="og:image" content="https://baladesculturelles.github.io/balades-culturelles-site/assets/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt" content="Balades Culturelles — une rue de Paris bordée de façades anciennes, avec le titre du site.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Balades Culturelles — Balades à Paris et en Île-de-France">
+    <meta name="twitter:description" content="Des promenades culturelles à Paris et en Île-de-France avec Marie-Tiyi Jalon.">
+    <meta name="twitter:image" content="https://baladesculturelles.github.io/balades-culturelles-site/assets/og-image.jpg">
+    <meta name="twitter:image:alt" content="Balades Culturelles — une rue de Paris bordée de façades anciennes, avec le titre du site.">
     <title>Balades Culturelles — Balades à Paris et en Île-de-France</title>
-    <link rel="icon" href="assets/logo.png" type="image/png">
+    <link rel="icon" href="assets/responsive/logo-96.png" sizes="96x96" type="image/png">
+    <link rel="apple-touch-icon" href="assets/responsive/logo-96.png">
+    <!-- Le formulaire envoie sa demande à Google Apps Script : ouvrir la connexion
+         dès le chargement évite une résolution DNS et une poignée de main TLS
+         au moment du clic sur « Envoyer ». Sans effet en aperçu local. -->
+    <link rel="preconnect" href="https://script.google.com" crossorigin>
+    <link rel="dns-prefetch" href="https://script.googleusercontent.com">
     <link rel="preload" as="image" imagesrcset="assets/responsive/hero-guide-480.webp 480w, assets/responsive/hero-guide-800.webp 800w, assets/responsive/hero-guide-1200.webp 1200w" imagesizes="(max-width: 760px) 94vw, (max-width: 980px) 52vw, 620px" type="image/webp">
-    <link rel="stylesheet" href="styles.css?v=ameliorations-20261019-4">
-    <script src="script.js?v=ameliorations-20261019-4" defer></script>
+    <link rel="stylesheet" href="styles.css?v=ameliorations-20261019-6">
+    <script src="script.js?v=ameliorations-20261019-6" defer></script>
     <noscript><style>
       .legal-dialog { position: static; display: block; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
       .legal-dialog-frame { max-height: none; }
@@ -30,7 +47,7 @@
     <header class="site-header" data-header>
       <div class="header-inner section-shell">
         <a class="brand" href="#top">
-          <span class="brand-logo" aria-hidden="true"><img src="assets/logo.png" width="48" height="48" alt=""></span>
+          <span class="brand-logo" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
           <span class="brand-lockup"><strong>Balades <em>Culturelles</em></strong><small>Paris · Île-de-France</small></span>
         </a>
         <button class="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="primary-navigation">
@@ -71,7 +88,7 @@
             <span class="hero-caption-kicker">Le plaisir de flâner</span>
             <p>Lever les yeux.<br><em>Découvrir la ville autrement.</em></p>
           </div>
-          <div class="hero-seal"><img src="assets/logo.png" width="132" height="132" alt="Logo Balades Culturelles, Paris – Île-de-France"></div>
+          <div class="hero-seal"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="Logo Balades Culturelles, Paris – Île-de-France" decoding="async"></div>
         </div>
       </section>
 
@@ -157,7 +174,7 @@
               <button class="inspiration-nav-button" type="button" data-inspiration-next aria-label="Voir les balades suivantes">→</button>
             </div>
           </div>
-          <div class="inspiration-track" id="inspiration-track" role="list" aria-label="Prochaines balades publiques, dans l’ordre des dates" tabindex="0"></div>
+          <ul class="inspiration-track" id="inspiration-track" aria-label="Prochaines balades publiques, dans l’ordre des dates" tabindex="0"></ul>
           <p class="inspiration-hint">Faites glisser vers la droite ou utilisez les flèches pour découvrir les autres dates. <a href="#programme">Voir tout le programme</a></p>
           <noscript><p class="inspiration-hint"><a href="#programme">Voir le programme des balades publiques</a></p></noscript>
           <div class="topic-heading">
@@ -390,7 +407,7 @@
       <section class="guide section-space" id="guide" aria-labelledby="guide-title">
         <div class="guide-layout section-shell">
           <div class="guide-visual">
-            <picture><source type="image/webp" sizes="(max-width: 560px) 88vw, 42vw" srcset="assets/responsive/facade-480.webp 480w, assets/responsive/facade-800.webp 800w, assets/responsive/facade-961.webp 961w"><img class="guide-photo" src="assets/facade.jpg" width="961" height="1080" loading="lazy" alt="Façade art nouveau aux balcons de fer forgé, porte sculptée et groupe de promeneurs, à observer en promenade."></picture>
+            <picture><source type="image/webp" sizes="(max-width: 560px) 88vw, (max-width: 1280px) 36vw, 465px" srcset="assets/responsive/facade-480.webp 480w, assets/responsive/facade-800.webp 800w, assets/responsive/facade-961.webp 961w"><img class="guide-photo" src="assets/facade.jpg" width="961" height="1080" loading="lazy" alt="Façade art nouveau aux balcons de fer forgé, porte sculptée et groupe de promeneurs, à observer en promenade."></picture>
             <div class="guide-photo-note"><span>UN REGARD ATTENTIF</span><b>sur les petites histoires</b></div>
             <picture><source type="image/webp" sizes="170px" srcset="assets/responsive/marie-tiyi-400.webp 400w, assets/responsive/marie-tiyi-500.webp 500w"><img class="guide-portrait" src="assets/marie-tiyi.jpg" width="500" height="500" loading="lazy" alt="Portrait de Marie-Tiyi Jalon, votre guide."></picture>
           </div>
@@ -464,7 +481,7 @@
             </div>
 
             <div class="contact-person">
-              <span class="contact-person-seal" aria-hidden="true"><img src="assets/logo.png" width="76" height="76" alt=""></span>
+              <span class="contact-person-seal" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
               <span class="contact-kicker">Une question avant de réserver&nbsp;?</span>
               <strong>Marie-Tiyi Jalon</strong>
               <a href="tel:+33601740449">06&nbsp;01&nbsp;74&nbsp;04&nbsp;49 <span aria-hidden="true">↗</span></a>
@@ -558,6 +575,13 @@
               <p class="form-hint">Pour une visite publique, la confirmation et sa référence s’affichent ici si des places sont disponibles, et un e-mail de confirmation part aussitôt vers votre adresse. Pour une demande sur mesure (seniors, écoles, groupe privé), votre demande est envoyée directement à Marie-Tiyi et vous recevez un e-mail récapitulatif.</p>
             </div>
             <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+            <div class="booking-calendar" id="booking-calendar" hidden>
+              <p class="booking-calendar-label">Gardez la date</p>
+              <p class="booking-calendar-text" data-calendar-text></p>
+              <a class="button button-calendar" data-calendar-download href="#" download>
+                Ajouter à mon agenda <span aria-hidden="true">↓</span>
+              </a>
+            </div>
             <p class="privacy-note">Vos informations servent à traiter cette demande. <a href="#legal-confidentialite" data-legal-open="confidentialite">Consulter la notice de confidentialité</a>.</p>
           </form>
         </div>
@@ -657,7 +681,7 @@
     <footer class="site-footer">
       <div class="footer-inner section-shell">
         <a class="brand footer-brand" href="#top">
-          <span class="brand-logo" aria-hidden="true"><img src="assets/logo.png" width="48" height="48" alt=""></span>
+          <span class="brand-logo" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
           <span class="brand-lockup"><strong>Balades <em>Culturelles</em></strong><small>Paris · Île-de-France</small></span>
         </a>
         <p>Le patrimoine, les paysages et les histoires — à pied.</p>
