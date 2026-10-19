@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "07586b5a2a";
+const ENGINE_VERSION = "7ad2a3f2c6";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -120,6 +120,259 @@ const JOURNAL_HEADERS = Object.freeze([
 ]);
 
 /* ------------------------------------------------------------------ */
+/* Google Agenda (facultatif)                                         */
+/* ------------------------------------------------------------------ */
+
+// Un événement par date ayant au moins un participant : titre, horaire, lieu de
+// rendez-vous (case B4 de la fiche) et places restantes. Aucune donnée client
+// nominative n’est recopiée dans l’agenda : seulement des compteurs et des liens.
+// Réglages : CALENDAR_ID (agenda cible, par défaut l’agenda principal) et
+// CALENDAR_DISABLED=1 pour tout désactiver. Rien n’est envoyé aux participants.
+
+function calendarId_() {
+  return props_().getProperty("CALENDAR_ID") || "";
+}
+
+function calendar_() {
+  const id = calendarId_();
+  if (id) {
+    const named = CalendarApp.getCalendarById(id);
+    if (named) return named;
+    throw new Error(`Agenda introuvable (CALENDAR_ID=${id}).`);
+  }
+  return CalendarApp.getDefaultCalendar();
+}
+
+/** Traitement protégé : un souci d’agenda ne doit jamais bloquer une réservation. */
+function syncCalendarSafely_(onlySessionId) {
+  try {
+    const store = props_();
+    if (store.getProperty("CALENDAR_DISABLED") === "1") return;
+    const key = "calendar:run";
+    const started = Number(store.getProperty(key) || 0);
+    if (started && Date.now() - started < 300000) {
+      console.warn("Agenda : un traitement est déjà en cours.");
+      return;
+    }
+    store.setProperty(key, String(Date.now()));
+    try {
+      runCalendar_(onlySessionId);
+    } finally {
+      store.deleteProperty(key);
+    }
+  } catch (error) {
+    console.error("Agenda non mis à jour : " + error);
+  }
+}
+
+function runCalendar_(onlySessionId) {
+  const program = getProgram_();
+  if (!program.loaded) return; // sans programme, on ne touche à rien
+  const store = props_();
+  const stored = store.getProperties();
+  const sessions = onlySessionId
+    ? program.sessions.filter((session) => session.id === onlySessionId)
+    : program.sessions;
+  const known = {};
+  sessions.forEach((session) => {
+    known[propertyKey_("", session.id)] = true;
+    syncCalendarEvent_(session);
+  });
+  if (onlySessionId) return;
+  // Dates retirées du site : leur événement est conservé s’il reste des participants,
+  // sinon il est supprimé. Rien n’est jamais supprimé du calendrier d’une balade remplie.
+  Object.keys(stored).forEach((key) => {
+    if (key.indexOf("calendar:") !== 0) return;
+    const hash = key.slice("calendar:".length);
+    if (known[hash]) return;
+    const record = parseVisit_(stored["visit:" + hash]);
+    const stats = parseStats_(stored["stats:" + hash]);
+    if (record && stats.booked > 0) {
+      syncCalendarEvent_({ id: record.id, date: record.date, walk: record.walk, slot: record.slot, removed: true });
+    } else {
+      removeCalendarEvent_(key);
+    }
+  });
+}
+
+// Dates ajoutées (ou déplacées) directement dans l’agenda : elles complètent le
+// programme du site, sans le remplacer. Lecture mise en cache le temps d’une exécution.
+let agendaSessionsCache_ = null;
+
+function agendaTitle_(walk, removed) {
+  return `Balade : ${walk}${removed ? " (retirée du site)" : ""}`;
+}
+
+function slotLabel_(start, end) {
+  const read = (date) => {
+    const parts = Utilities.formatDate(date, TIME_ZONE, "HH:mm").split(":");
+    const hour = Number(parts[0]);
+    const minute = Number(parts[1]);
+    return minute ? `${hour} h ${minute}` : `${hour} h`;
+  };
+  return `${read(start)}–${read(end)}`;
+}
+
+/** Événements « Balade : … » de l’agenda, convertis en dates du programme. */
+function agendaSessions_() {
+  if (agendaSessionsCache_) return agendaSessionsCache_;
+  const result = { ready: false, sessions: [] };
+  try {
+    if (props_().getProperty("CALENDAR_DISABLED") === "1") {
+      agendaSessionsCache_ = result;
+      return result;
+    }
+    const calendar = calendar_();
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    // La veille comprise : une date terminée hier à 12 h reste affichée jusqu’à aujourd’hui 12 h.
+    start.setDate(start.getDate() - 1);
+    const end = new Date(start.getTime() + 401 * 86400000);
+    const seen = {};
+    calendar.getEvents(start, end).forEach((event) => {
+      const title = String(event.getTitle() || "").trim();
+      const match = /^Balade\s*:\s*(.+?)\s*(?:\((?:retirée du site|annulée)\))?$/i.exec(title);
+      if (!match) return;
+      const walk = match[1].trim();
+      if (!isLabel_(walk, 200)) return;
+      const from = event.getStartTime();
+      const to = event.getEndTime();
+      if (!from || !to) return;
+      // Au-delà de 24 h après la fin, la date quitte le site même si l’événement reste dans l’agenda.
+      if (Date.now() > to.getTime() + VISIBLE_HOURS_AFTER_END * 3600000) return;
+      const date = Utilities.formatDate(from, TIME_ZONE, "yyyy-MM-dd");
+      const slot = slotLabel_(from, to);
+      const id = `${date}|${walk}|${slot}`;
+      if (seen[id]) return;
+      seen[id] = true;
+      result.sessions.push({ id: id, date: date, walk: walk, slot: slot });
+    });
+    result.sessions.sort((a, b) => compare_(a.date, b.date) || compare_(a.walk, b.walk) || compare_(a.slot, b.slot));
+    // Une agenda vide ne doit jamais vider le programme du site.
+    result.ready = result.sessions.length > 0;
+  } catch (error) {
+    console.warn("Agenda non lisible : " + error);
+  }
+  agendaSessionsCache_ = result;
+  return result;
+}
+
+/** Ajoute au programme les dates présentes dans l’agenda mais pas sur le site. */
+function sessionsWithAgenda_(sessions) {
+  const agenda = agendaSessions_();
+  if (!agenda.sessions.length) return sessions;
+  const known = {};
+  sessions.forEach((session) => { known[`${session.date}|${session.walk}`] = true; });
+  const extra = agenda.sessions.filter((session) => !known[`${session.date}|${session.walk}`]);
+  if (!extra.length) return sessions;
+  return sessions.concat(extra)
+    .sort((a, b) => compare_(a.date, b.date) || compare_(a.walk, b.walk) || compare_(a.slot, b.slot));
+}
+
+function parseCalendarRecord_(value) {
+  if (!value) return null;
+  try {
+    const record = JSON.parse(value);
+    if (!record || !record.e) return null;
+    return { id: String(record.e), signature: String(record.sig || ""), date: String(record.d || ""), walk: String(record.w || ""), slot: String(record.s || "") };
+  } catch (error) {
+    return null;
+  }
+}
+
+/** Crée, met à jour ou supprime l’événement d’une date, sans appel inutile. */
+function syncCalendarEvent_(session) {
+  const store = props_();
+  const hash = propertyKey_("", session.id);
+  const key = "calendar:" + hash;
+  const stats = parseStats_(store.getProperty("stats:" + hash));
+  const booked = stats.booked || 0;
+  const existing = parseCalendarRecord_(store.getProperty(key));
+  if (!booked) {
+    if (existing) removeCalendarEvent_(key);
+    return;
+  }
+  const record = parseVisit_(store.getProperty("visit:" + hash));
+  const visit = record && openIfAlive_(record.fileId);
+  const meeting = visit ? meetingPlace_(visitSheet_(visit)) : "";
+  const removed = Boolean(session.removed);
+  const remaining = Math.max(0, getProgram_().capacity - booked);
+  const signature = [booked, stats.bookings, session.walk, session.slot, meeting, remaining, removed ? "R" : "", session.date].join("|");
+  // Vérification régulière des dates proches : un événement supprimé à la main est recréé.
+  const soon = session.date <= isoDaysAhead_(7);
+  if (existing && existing.signature === signature && !soon) return;
+
+  const calendar = calendar_();
+  let event = null;
+  if (existing) {
+    try {
+      event = calendar.getEventById(existing.id);
+    } catch (error) {
+      event = null;
+    }
+  }
+  const title = agendaTitle_(session.walk, removed);
+  const start = sessionStartDate_(session);
+  const end = sessionEndDate_(session);
+  const description = calendarDescription_(session, stats, visit, remaining);
+  // Événement déjà créé à la main (ou semé depuis le site) : on le reprend au lieu
+  // d’en créer un second.
+  if (!event) {
+    try {
+      const day = parseIsoDate_(session.date);
+      const from = new Date(day.year, day.month - 1, day.day, 0, 0, 0);
+      const to = new Date(day.year, day.month - 1, day.day + 1, 0, 0, 0);
+      event = calendar.getEvents(from, to)
+        .filter((candidate) => String(candidate.getTitle() || "").trim() === title)[0] || null;
+    } catch (error) {
+      event = null;
+    }
+  }
+  if (event) {
+    event.setTitle(title);
+    event.setTime(start, end);
+    event.setLocation(meeting);
+    event.setDescription(description);
+  } else {
+    event = calendar.createEvent(title, start, end, { description: description, location: meeting });
+  }
+  store.setProperty(key, JSON.stringify({
+    e: event.getId(), sig: signature, d: session.date, w: session.walk, s: session.slot,
+  }));
+}
+
+function calendarDescription_(session, stats, visit, remaining) {
+  const capacity = getProgram_().capacity;
+  const lines = [
+    `${stats.booked} place(s) réservée(s) · ${remaining} restante(s) sur ${capacity}`,
+    `Horaire : ${session.slot}`,
+  ];
+  const meeting = visit ? meetingPlace_(visitSheet_(visit)) : "";
+  lines.push(`Lieu de rendez-vous : ${meeting || "à préciser dans la fiche"}`);
+  if (visit) lines.push("", `Fiche de la date : ${visit.getUrl()}`);
+  const dashboard = openIfAlive_(props_().getProperty("DASHBOARD_ID"));
+  if (dashboard) lines.push(`Tableau de bord : ${dashboard.getUrl()}`);
+  lines.push("", "Événement créé et mis à jour automatiquement par le site Balades Culturelles.");
+  return lines.join("\n");
+}
+
+function removeCalendarEvent_(key) {
+  const store = props_();
+  const existing = parseCalendarRecord_(store.getProperty(key));
+  if (!existing) {
+    store.deleteProperty(key);
+    return;
+  }
+  try {
+    const event = calendar_().getEventById(existing.id);
+    if (event) event.deleteEvent();
+  } catch (error) {
+    console.warn("Événement d’agenda introuvable (déjà supprimé ?) : " + error);
+  }
+  store.deleteProperty(key);
+}
+
+/* ------------------------------------------------------------------ */
 /* Comptabilité (tableur privé, jamais publié)                        */
 /* ------------------------------------------------------------------ */
 
@@ -154,6 +407,30 @@ const ALERT_HEADERS = Object.freeze([
 const ALERT_OPEN = "À vérifier";
 const ALERT_CLOSED = "Réglé";
 
+/* ------------------------------------------------------------------ */
+/* Carnet d’adresses (tableur privé, jamais publié)                   */
+/* ------------------------------------------------------------------ */
+
+// Un contact = une personne (ou un foyer) identifié par son e-mail ou son téléphone.
+// Le carnet est reconstruit à partir des fiches de dates et du journal : une personne
+// déjà présente n’est jamais ajoutée deux fois, seules ses visites sont mises à jour.
+const CONTACTS_NAME = "Carnet d’adresses — Balades Culturelles";
+const CONTACTS_SHEET = "Carnet d’adresses";
+const CONTACTS_TITLE_ROW = 1;
+const CONTACTS_SUMMARY_ROW = 2;
+const CONTACTS_HEADER_ROW = 4;
+const CONTACTS_FIRST_ROW = 5;
+const CONTACT_HEADERS = Object.freeze([
+  "Clé", "Prénom", "Nom", "E-mail", "Autres e-mails", "Téléphone", "Autres téléphones",
+  "Première visite", "Dernière visite", "Visites", "Personnes", "Balades",
+  "Dernière balade", "Étape", "Ajouté au carnet", "Ne pas contacter", "Vos notes",
+]);
+const CONTACT_COL = Object.freeze({
+  key: 1, firstName: 2, lastName: 3, email: 4, altEmails: 5, phone: 6, altPhones: 7,
+  firstVisit: 8, lastVisit: 9, visits: 10, people: 11, walks: 12, lastWalk: 13,
+  stage: 14, addedAt: 15, optOut: 16, notes: 17,
+});
+
 // Programme lu pendant l’exécution en cours (chaque appel au script repart de zéro).
 let programCache_ = null;
 
@@ -179,10 +456,14 @@ function installer() {
     refreshUpcomingStats_();
     writeDashboard_(dashboard);
   });
+  // Le carnet d’adresses est créé dès l’installation (même vide) : il se remplit
+  // ensuite tout seul à chaque réservation.
+  runContactsSafely_();
+  syncCalendarSafely_();
   const program = getProgram_();
   const opening = `C’est prêt : ouvrez le dossier « ${ROOT_FOLDER_NAME} » dans votre Google Drive.`;
   const message = program.loaded
-    ? `${opening} Programme lu sur le site : ${program.sessions.length} dates.`
+    ? `${opening} Programme lu sur le site : ${baseProgram_().sessions.length} dates.`
     : `${opening} Le programme n’a pas encore pu être lu sur le site (${fetched.reason}) ; il le sera automatiquement dès sa publication.`;
   console.log(message);
   return message;
@@ -206,12 +487,14 @@ function synchroniser() {
     sendVisitReports_();
     return true;
   }, { optional: true });
-  // Comptabilité : tâche indépendante, protégée par son propre verrou.
-  // Une difficulté comptable ne bloque ni les réservations ni les e-mails.
+  // Comptabilité et carnet d’adresses : tâches indépendantes, protégées par leur
+  // propre verrou. Une difficulté n’empêche ni les réservations ni les e-mails.
   runAccountingSafely_();
+  runContactsSafely_();
+  syncCalendarSafely_();
   if (!done) return "Une réservation était en cours : nouvelle mise à jour au prochain passage.";
   return fetched.ok
-    ? `Tableau de bord à jour (${getProgram_().sessions.length} dates lues sur le site).`
+    ? `Tableau de bord à jour (${baseProgram_().sessions.length} dates lues sur le site).`
     : "Tableau de bord à jour (programme du site momentanément illisible : la dernière version est conservée).";
 }
 
@@ -229,6 +512,15 @@ function doGet(e) {
       console.error(error);
       return jsonOutput_({ error: "availability_unavailable", message: "Les disponibilités sont momentanément indisponibles." });
     }
+  }
+  // Le site complète ses dates avec celles de l’agenda (?api=schedule).
+  if (e && e.parameter && e.parameter.api === "schedule") {
+    const agenda = agendaSessions_();
+    return jsonOutput_({
+      ok: true,
+      agenda: agenda.ready,
+      sessions: agenda.sessions.map((session) => ({ date: session.date, walk: session.walk, slot: session.slot })),
+    });
   }
   return jsonOutput_({ ok: true, service: "Balades Culturelles — réservations", message: "Ce service reçoit les réservations du site." });
 }
@@ -371,10 +663,9 @@ function jsonOutput_(payload) {
 /** Places restantes par date à venir, lues dans les compteurs (aucun tableur ouvert : réponse rapide). */
 function getAvailability_() {
   const program = getProgram_();
-  const today = todayParis_();
   const stored = props_().getProperties();
   const sessions = program.sessions
-    .filter((session) => session.date >= today)
+    .filter((session) => !sessionHidden_(session))
     .map((session) => {
       const booked = parseStats_(stored[propertyKey_("stats:", session.id)]).booked;
       return {
@@ -385,6 +676,8 @@ function getAvailability_() {
         capacity: program.capacity,
         booked: booked,
         remaining: Math.max(0, program.capacity - booked),
+        ends_at_ms: sessionEndDate_(session).getTime(),
+        ended: Date.now() >= sessionEndDate_(session).getTime(),
       };
     });
   return { capacity: program.capacity, sessions: sessions };
@@ -400,6 +693,13 @@ function programmeUrl_() {
 
 /** Programme enregistré lors de la dernière lecture réussie du site. */
 function getProgram_() {
+  const base = baseProgram_();
+  const sessions = sessionsWithAgenda_(base.sessions);
+  return sessions === base.sessions ? base : Object.assign({}, base, { sessions: sessions });
+}
+
+/** Programme tel que publié sur le site, sans les dates ajoutées dans l’agenda. */
+function baseProgram_() {
   if (programCache_) return programCache_;
   const stored = props_().getProperties();
   const parts = Number(stored.PROGRAM_PARTS) || 0;
@@ -428,7 +728,7 @@ function refreshProgram_() {
     const code = response.getResponseCode();
     if (code !== 200) throw new Error(`réponse ${code}`);
     const program = parseProgramme_(JSON.parse(response.getContentText()));
-    const previous = getProgram_();
+    const previous = baseProgram_();
     const changed = !previous.loaded || programSignature_(previous) !== programSignature_(program);
     storeProgram_(program);
     return { ok: true, changed: changed, count: program.sessions.length };
@@ -553,7 +853,9 @@ function createBooking_(payload) {
     session = program.sessions.find((item) => item.id === sessionId);
   }
   if (!session) throw new Error("Cette balade ou cette date n’est pas au programme.");
-  if (session.date < todayParis_()) throw new Error("Cette date est passée. Choisissez une prochaine balade.");
+  if (Date.now() >= sessionEndDate_(session).getTime()) {
+    throw new Error("Cette date est passée ou la balade est terminée. Choisissez une prochaine date.");
+  }
 
   const capacity = program.capacity;
   const participants = Number(payload.participants);
@@ -640,6 +942,8 @@ function createBooking_(payload) {
       priceEstimate: priceEstimate,
       sheet: sheet,
     });
+    // Agenda de la guide : la date et le nombre de places suivent la réservation.
+    syncCalendarSafely_(session.id);
 
     return {
       ok: true,
@@ -1311,13 +1615,16 @@ function buildConfirmationEmail_(booking) {
 }
 
 /** Case jaune de la fiche de la date (B4) : le lieu de rendez-vous, s’il est déjà noté. */
-function meetingLine_(sheet) {
-  let meeting = "";
+function meetingPlace_(sheet) {
   try {
-    meeting = cleanText_(sheet.getRange(MEETING_CELL).getValue(), 300);
+    return cleanText_(sheet.getRange(MEETING_CELL).getValue(), 300);
   } catch (error) {
-    meeting = "";
+    return "";
   }
+}
+
+function meetingLine_(sheet) {
+  const meeting = meetingPlace_(sheet);
   return meeting ? `Lieu de rendez-vous : ${meeting}` : MEETING_FALLBACK;
 }
 
@@ -1750,8 +2057,578 @@ function writeAlerts_(sheet, alerts) {
   [200, 200, 420, 130, 100].forEach((size, index) => sheet.setColumnWidth(index + 1, size));
 }
 
+/* ------------------------------------------------------------------ */
+/* Carnet d’adresses : lecture, fusion et écriture                    */
+/* ------------------------------------------------------------------ */
+
+function getContacts_(root) {
+  const known = openIfAlive_(props_().getProperty("CONTACTS_ID"));
+  if (known) return known;
+  let book = findSpreadsheet_(root, CONTACTS_NAME);
+  if (!book) book = createSpreadsheetIn_(root, CONTACTS_NAME);
+  props_().setProperty("CONTACTS_ID", book.getId());
+  return book;
+}
+
+/** Prépare l’onglet unique du carnet (titres, largeurs, formats, liste déroulante). */
+function setupContacts_(book) {
+  const sheets = book.getSheets();
+  let sheet = book.getSheetByName(CONTACTS_SHEET);
+  if (!sheet) {
+    if (sheets.length === 1) sheet = sheets[0].setName(CONTACTS_SHEET);
+    else sheet = book.insertSheet(CONTACTS_SHEET);
+  }
+  const width = CONTACT_HEADERS.length;
+  sheet.setHiddenGridlines(true);
+  sheet.getRange(CONTACTS_TITLE_ROW, 1).setValue("Carnet d’adresses — Balades Culturelles")
+    .setFontSize(18).setFontWeight("bold").setFontColor(COLORS.forest);
+  sheet.getRange(CONTACTS_SUMMARY_ROW, 1).setFontColor(COLORS.muted);
+  sheet.getRange(CONTACTS_HEADER_ROW, 1, 1, width).setValues([CONTACT_HEADERS.slice()])
+    .setFontWeight("bold").setFontColor(COLORS.white).setBackground(COLORS.forest)
+    .setVerticalAlignment("middle");
+  sheet.setRowHeight(CONTACTS_HEADER_ROW, 32);
+  sheet.setFrozenRows(CONTACTS_HEADER_ROW);
+  const rows = Math.max(1, sheet.getMaxRows() - CONTACTS_FIRST_ROW + 1);
+  sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.firstVisit, rows, 2).setNumberFormat("dd/mm/yyyy");
+  sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.addedAt, rows, 1).setNumberFormat("dd/mm/yyyy hh:mm");
+  sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.visits, rows, 2).setNumberFormat("0");
+  sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.optOut, rows, 1)
+    .setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(["Oui"], true).setAllowInvalid(true).build());
+  // Une personne écartée reste visible mais grisée : rien n’est jamais effacé.
+  const optOutRange = sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.optOut, rows, 1);
+  sheet.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo("Oui")
+      .setFontColor("#9a9a92").setItalic(true).setRanges([optOutRange]).build(),
+  ]);
+  [110, 120, 140, 230, 210, 150, 150, 120, 120, 75, 90, 80, 230, 110, 140, 120, 280]
+    .forEach((size, index) => sheet.setColumnWidth(index + 1, size));
+  return sheet;
+}
+
+/** Traitement complet : un seul passage, protégé par son propre verrou. */
+function runContactsSafely_() {
+  try {
+    const store = props_();
+    const key = "contacts:run";
+    const started = Number(store.getProperty(key) || 0);
+    if (started && Date.now() - started < 300000) {
+      console.warn("Carnet d’adresses : un traitement est déjà en cours.");
+      return;
+    }
+    store.setProperty(key, String(Date.now()));
+    try {
+      runContacts_();
+    } finally {
+      store.deleteProperty(key);
+    }
+  } catch (error) {
+    // Un souci sur le carnet ne doit jamais bloquer une réservation ni les e-mails.
+    console.error("Carnet d’adresses non mis à jour : " + error);
+  }
+}
+
+function runContacts_() {
+  const root = getRootFolder_();
+  const book = getContacts_(root);
+  const sheet = setupContacts_(book);
+  const existing = readExistingContacts_(sheet);
+  const contacts = buildContacts_(root, existing);
+  writeContacts_(sheet, contacts);
+}
+
+/** Contacts déjà enregistrés : identité et colonnes tenues à la main sont conservées. */
+function readExistingContacts_(sheet) {
+  const last = sheet.getLastRow();
+  if (last < CONTACTS_FIRST_ROW) return [];
+  const rows = sheet.getRange(CONTACTS_FIRST_ROW, 1, last - CONTACTS_FIRST_ROW + 1, CONTACT_HEADERS.length).getValues();
+  const contacts = [];
+  const seen = {};
+  rows.forEach((values) => {
+    const key = String(values[CONTACT_COL.key - 1] == null ? "" : values[CONTACT_COL.key - 1]).trim();
+    if (!key || seen[key]) return;
+    seen[key] = true;
+    contacts.push({
+      key: key,
+      firstName: textCell_(values[CONTACT_COL.firstName - 1]),
+      lastName: textCell_(values[CONTACT_COL.lastName - 1]),
+      email: textCell_(values[CONTACT_COL.email - 1]),
+      altEmails: splitContactsList_(values[CONTACT_COL.altEmails - 1]),
+      phone: phoneText_(values[CONTACT_COL.phone - 1]),
+      altPhones: splitContactsList_(values[CONTACT_COL.altPhones - 1]),
+      addedAt: parseSheetDate_(values[CONTACT_COL.addedAt - 1]),
+      optOut: /^oui$/i.test(textCell_(values[CONTACT_COL.optOut - 1])),
+      notes: textCell_(values[CONTACT_COL.notes - 1]),
+      touched: false,
+      sessions: new Map(),
+      cancelled: 0,
+      stage: textCell_(values[CONTACT_COL.stage - 1]),
+      lastBookingSort: "",
+      legacy: {
+        visits: Number(values[CONTACT_COL.visits - 1]) || 0,
+        people: Number(values[CONTACT_COL.people - 1]) || 0,
+        walks: Number(values[CONTACT_COL.walks - 1]) || 0,
+        firstDate: isoOf_(values[CONTACT_COL.firstVisit - 1]),
+        lastDate: isoOf_(values[CONTACT_COL.lastVisit - 1]),
+        lastWalk: textCell_(values[CONTACT_COL.lastWalk - 1]),
+      },
+    });
+  });
+  return contacts;
+}
+
+/**
+ * Rassemble toutes les réservations connues (fiches de dates, journal, registre
+ * comptable) puis fusionne les personnes qui partagent un e-mail ou un téléphone.
+ */
+function buildContacts_(root, existing) {
+  const records = new Map();
+  const emailOwners = new Map();
+  const phoneOwners = new Map();
+  existing.forEach((record) => {
+    records.set(record.key, record);
+    [record.email].concat(record.altEmails).forEach((email) => {
+      const normalized = normalizeEmail_(email);
+      if (normalized && !emailOwners.has(normalized)) emailOwners.set(normalized, record.key);
+    });
+    [record.phone].concat(record.altPhones).forEach((phone) => {
+      const normalized = normalizePhone_(phone);
+      if (normalized && !phoneOwners.has(normalized)) phoneOwners.set(normalized, record.key);
+    });
+  });
+
+  const bookings = collectContactBookings_(root);
+  bookings.forEach((booking) => {
+    addContactBooking_(records, emailOwners, phoneOwners, booking);
+  });
+
+  return [...records.values()];
+}
+
+/**
+ * Toutes les réservations à prendre en compte. Les fiches de dates font foi ;
+ * le journal sert à retrouver les fiches et à ne pas oublier une réservation
+ * dont la fiche aurait été supprimée ou déplacée.
+ */
+function collectContactBookings_(root) {
+  const sources = [];
+  const seenFiles = {};
+  const addSource = (fileId, info) => {
+    if (!fileId || seenFiles[fileId]) return;
+    seenFiles[fileId] = true;
+    sources.push({
+      fileId: fileId,
+      date: info.date || "",
+      walk: info.walk || "",
+      slot: info.slot || "",
+    });
+  };
+
+  // 1. Fiches retenues par le moteur.
+  const stored = props_().getProperties();
+  Object.keys(stored).forEach((key) => {
+    if (key.indexOf("visit:") !== 0) return;
+    const record = parseVisit_(stored[key]);
+    if (record && record.fileId) addSource(record.fileId, record);
+  });
+
+  // 2. Registre des fiches suivi par la comptabilité (survit au nettoyage).
+  const accounting = openIfAlive_(stored.ACCOUNTING_ID);
+  if (accounting) {
+    const registry = accounting.getSheetByName(ACCOUNTING_FILES);
+    if (registry) {
+      readTabRows_(registry, FILES_HEADERS.length).forEach((row) => {
+        addSource(String(row[0] == null ? "" : row[0]).trim(), {
+          date: isoOf_(row[1]),
+          walk: textCell_(row[2]),
+          slot: textCell_(row[3]),
+        });
+      });
+    }
+  }
+
+  // 3. Journal : source historique complète, et lien direct vers chaque fiche.
+  const dashboard = openIfAlive_(stored.DASHBOARD_ID) || findSpreadsheet_(root, DASHBOARD_NAME);
+  const journalRows = [];
+  if (dashboard) {
+    const journal = dashboard.getSheetByName(JOURNAL_SHEET);
+    if (journal && journal.getLastRow() > 1) {
+      const journalRange = journal.getRange(2, 1, journal.getLastRow() - 1, JOURNAL_HEADERS.length);
+      const journalValues = journalRange.getValues();
+      // La colonne « Fiche de la date » contient un lien =HYPERLINK(...) : getValues()
+      // renvoie son texte affiché (« Ouvrir la fiche »), la formule est dans getFormulas().
+      const journalFormulas = journalRange.getFormulas();
+      journalValues.forEach((row, index) => {
+        const date = isoOf_(row[1]);
+        const walk = textCell_(row[2]);
+        const slot = textCell_(row[3]);
+        if (!date || !walk) return;
+        const fileId = fileIdFromLink_(journalFormulas[index][10]) || fileIdFromLink_(row[10]);
+        if (fileId) addSource(fileId, { date: date, walk: walk, slot: slot });
+        journalRows.push({
+          reference: textCell_(row[4]),
+          createdAt: parseSheetDate_(row[0]),
+          firstName: textCell_(row[12]),
+          lastName: textCell_(row[5]),
+          email: textCell_(row[6]),
+          phone: phoneText_(row[7]),
+          people: Number(row[8]) || 0,
+          status: "",
+          date: date,
+          walk: walk,
+          slot: slot,
+          source: "journal",
+        });
+      });
+    }
+  }
+
+  const bookings = [];
+  const seenReferences = {};
+  sources.forEach((source) => {
+    const visit = openIfAlive_(source.fileId);
+    if (!visit) return;
+    const session = {
+      id: `${source.date}|${source.walk}|${source.slot}`,
+      date: source.date,
+      walk: source.walk,
+      slot: source.slot,
+    };
+    readVisitEntries_(visitSheet_(visit)).forEach((entry) => {
+      const values = entry.values;
+      const reference = textCell_(values[0]);
+      if (reference) {
+        if (seenReferences[reference]) return;
+        seenReferences[reference] = true;
+      }
+      const people = Number(values[VISIT_COL.people - 1]) || 0;
+      if (people <= 0) return;
+      bookings.push({
+        reference: reference,
+        firstName: textCell_(values[VISIT_COL.firstName - 1]),
+        lastName: textCell_(values[1]),
+        email: textCell_(values[2]),
+        phone: phoneText_(values[3]),
+        people: people,
+        status: textCell_(values[VISIT_COL.status - 1]) || TO_CONTACT,
+        createdAt: parseSheetDate_(values[VISIT_COL.createdAt - 1]),
+        date: session.date,
+        walk: session.walk,
+        slot: session.slot,
+        sessionId: session.id,
+        source: "fiche",
+      });
+    });
+  });
+
+  // Réservations présentes au journal mais dont la fiche n’est plus lisible.
+  journalRows.forEach((row) => {
+    if (row.people <= 0) return;
+    if (row.reference && seenReferences[row.reference]) return;
+    if (row.reference) seenReferences[row.reference] = true;
+    bookings.push(Object.assign({ sessionId: `${row.date}|${row.walk}|${row.slot}` }, row));
+  });
+
+  // Ordre chronologique : la dernière réservation donne l’étape affichée.
+  return bookings.sort((a, b) => compare_(a.date, b.date)
+    || compare_(bookingTime_(a), bookingTime_(b))
+    || compare_(a.reference, b.reference));
+}
+
+function bookingTime_(booking) {
+  return booking.createdAt instanceof Date ? booking.createdAt.getTime() : 0;
+}
+
+/** Ajoute une réservation au bon contact, sans jamais créer de doublon. */
+function addContactBooking_(records, emailOwners, phoneOwners, booking) {
+  const email = normalizeEmail_(booking.email);
+  const phone = normalizePhone_(booking.phone);
+  if (!email && !phone) return; // sans coordonnée, la personne n’est pas joignable
+
+  const byEmail = email ? emailOwners.get(email) : "";
+  const byPhone = phone ? phoneOwners.get(phone) : "";
+  let key = byEmail || byPhone;
+  if (byEmail && byPhone && byEmail !== byPhone) {
+    // Le même e-mail et le même téléphone désignent deux fiches : on les réunit.
+    key = mergeContactRecords_(records, byEmail, byPhone, emailOwners, phoneOwners);
+  }
+  if (!key) {
+    key = contactKeyFor_(records, email, phone);
+    records.set(key, newContactRecord_(key));
+  }
+  const record = records.get(key);
+
+  // Première réservation connue pour ce contact : les compteurs repartent de zéro.
+  record.touched = true;
+  const receivedAt = booking.createdAt instanceof Date
+    ? booking.createdAt
+    : (booking.date ? sheetDate_(booking.date) : null);
+  if (receivedAt && (!(record.addedAt instanceof Date) || receivedAt < record.addedAt)) {
+    record.addedAt = receivedAt;
+  }
+  if (!record.firstName && booking.firstName) record.firstName = booking.firstName;
+  if (!record.lastName && booking.lastName) record.lastName = booking.lastName;
+  if (!record.phone && booking.phone) {
+    record.phone = booking.phone;
+    if (phone && !phoneOwners.has(phone)) phoneOwners.set(phone, key);
+  }
+  if (!record.email && booking.email) {
+    record.email = booking.email;
+    if (email && !emailOwners.has(email)) emailOwners.set(email, key);
+  }
+  if (email && normalizeEmail_(record.email) !== email && !record.altEmails.some((item) => normalizeEmail_(item) === email)) {
+    record.altEmails.push(booking.email);
+    emailOwners.set(email, key);
+  }
+  if (phone && normalizePhone_(record.phone) !== phone && !record.altPhones.some((item) => normalizePhone_(item) === phone)) {
+    record.altPhones.push(booking.phone);
+    phoneOwners.set(phone, key);
+  }
+
+  if (booking.status === CANCELLED) {
+    record.cancelled += 1;
+  } else {
+    const current = record.sessions.get(booking.sessionId);
+    if (current) current.people += booking.people;
+    else {
+      record.sessions.set(booking.sessionId, {
+        date: booking.date,
+        walk: booking.walk,
+        slot: booking.slot,
+        people: booking.people,
+        sort: bookingTime_(booking),
+      });
+    }
+  }
+  const sortKey = `${booking.date}T${String(bookingTime_(booking)).padStart(14, "0")}`;
+  if (sortKey >= record.lastBookingSort) {
+    record.lastBookingSort = sortKey;
+    record.stage = booking.status || TO_CONTACT;
+  }
+}
+
+function newContactRecord_(key) {
+  return {
+    key: key,
+    firstName: "",
+    lastName: "",
+    email: "",
+    altEmails: [],
+    phone: "",
+    altPhones: [],
+    addedAt: null,
+    optOut: false,
+    notes: "",
+    touched: true,
+    sessions: new Map(),
+    cancelled: 0,
+    stage: "",
+    lastBookingSort: "",
+    legacy: { visits: 0, people: 0, walks: 0, firstDate: "", lastDate: "", lastWalk: "" },
+  };
+}
+
+/** Fusionne deux contacts qui s’avèrent être la même personne. */
+function mergeContactRecords_(records, keyA, keyB, emailOwners, phoneOwners) {
+  const target = records.get(keyA);
+  const source = records.get(keyB);
+  if (!target) return keyB;
+  if (!source) return keyA;
+  const bothUntouched = !target.touched && !source.touched;
+  if (bothUntouched && source.legacy) {
+    target.legacy.visits += source.legacy.visits;
+    target.legacy.people += source.legacy.people;
+    target.legacy.walks += source.legacy.walks;
+    if (source.legacy.firstDate && (!target.legacy.firstDate || source.legacy.firstDate < target.legacy.firstDate)) {
+      target.legacy.firstDate = source.legacy.firstDate;
+    }
+    if (source.legacy.lastDate && source.legacy.lastDate > target.legacy.lastDate) {
+      target.legacy.lastDate = source.legacy.lastDate;
+      target.legacy.lastWalk = source.legacy.lastWalk;
+    }
+  }
+  target.touched = target.touched || source.touched;
+  target.firstName = target.firstName || source.firstName;
+  target.lastName = target.lastName || source.lastName;
+  if (!target.email) target.email = source.email;
+  else if (source.email && normalizeEmail_(target.email) !== normalizeEmail_(source.email)
+    && !target.altEmails.some((item) => normalizeEmail_(item) === normalizeEmail_(source.email))) {
+    target.altEmails.push(source.email);
+  }
+  if (!target.phone) target.phone = source.phone;
+  else if (source.phone && normalizePhone_(target.phone) !== normalizePhone_(source.phone)
+    && !target.altPhones.some((item) => normalizePhone_(item) === normalizePhone_(source.phone))) {
+    target.altPhones.push(source.phone);
+  }
+  source.altEmails.forEach((email) => {
+    if (normalizeEmail_(email) !== normalizeEmail_(target.email)
+      && !target.altEmails.some((item) => normalizeEmail_(item) === normalizeEmail_(email))) target.altEmails.push(email);
+    emailOwners.set(normalizeEmail_(email), keyA);
+  });
+  source.altPhones.forEach((phone) => {
+    if (normalizePhone_(phone) !== normalizePhone_(target.phone)
+      && !target.altPhones.some((item) => normalizePhone_(item) === normalizePhone_(phone))) target.altPhones.push(phone);
+    phoneOwners.set(normalizePhone_(phone), keyA);
+  });
+  source.sessions.forEach((session, id) => {
+    const current = target.sessions.get(id);
+    if (current) current.people += session.people;
+    else target.sessions.set(id, session);
+  });
+  target.cancelled += source.cancelled;
+  if (source.lastBookingSort > target.lastBookingSort) {
+    target.lastBookingSort = source.lastBookingSort;
+    target.stage = source.stage;
+  }
+  if (source.addedAt instanceof Date && (!(target.addedAt instanceof Date) || source.addedAt < target.addedAt)) {
+    target.addedAt = source.addedAt;
+  }
+  target.optOut = target.optOut || source.optOut;
+  if (source.notes && source.notes !== target.notes) target.notes = target.notes ? `${target.notes}\n${source.notes}` : source.notes;
+  [source.email].concat(source.altEmails).forEach((email) => {
+    const normalized = normalizeEmail_(email);
+    if (normalized) emailOwners.set(normalized, keyA);
+  });
+  [source.phone].concat(source.altPhones).forEach((phone) => {
+    const normalized = normalizePhone_(phone);
+    if (normalized) phoneOwners.set(normalized, keyA);
+  });
+  records.delete(keyB);
+  return keyA;
+}
+
+/** Clé stable dérivée de l’e-mail (ou du téléphone) : la même personne garde la même ligne. */
+function contactKeyFor_(records, email, phone) {
+  const basis = email || phone;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, basis, Utilities.Charset.UTF_8);
+  const base = "C-" + digest.slice(0, 6).map((byte) => ((byte + 256) % 256).toString(16).padStart(2, "0")).join("").toUpperCase();
+  let key = base;
+  let suffix = 2;
+  while (records.has(key)) {
+    key = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return key;
+}
+
+/** Écrit le carnet trié : dernière visite la plus récente en haut. */
+function writeContacts_(sheet, records) {
+  const rows = records.map((record) => contactRow_(record)).filter(Boolean);
+  rows.sort((a, b) => {
+    const dateA = a.dateSort || "";
+    const dateB = b.dateSort || "";
+    if (dateA !== dateB) return dateA < dateB ? 1 : -1;
+    return compare_(`${a.lastName} ${a.firstName}`.toLowerCase(), `${b.lastName} ${b.firstName}`.toLowerCase());
+  });
+  const values = rows.map((row) => row.values);
+  const last = sheet.getLastRow();
+  if (values.length) {
+    sheet.getRange(CONTACTS_FIRST_ROW, 1, values.length, CONTACT_HEADERS.length).setValues(values);
+    sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.firstVisit, values.length, 2).setNumberFormat("dd/mm/yyyy");
+    sheet.getRange(CONTACTS_FIRST_ROW, CONTACT_COL.addedAt, values.length, 1).setNumberFormat("dd/mm/yyyy hh:mm");
+  }
+  if (last > values.length + CONTACTS_FIRST_ROW - 1) {
+    sheet.getRange(CONTACTS_FIRST_ROW + values.length, 1, last - values.length - CONTACTS_FIRST_ROW + 1, CONTACT_HEADERS.length).clearContent();
+  }
+  const today = todayParis_();
+  const month = today.slice(0, 7);
+  const visited = rows.filter((row) => row.visits > 0).length;
+  const fresh = rows.filter((row) => row.addedAt instanceof Date && isoOf_(row.addedAt).slice(0, 7) === month).length;
+  const optedOut = rows.filter((row) => row.optOut).length;
+  const cancelled = rows.reduce((total, row) => total + row.cancelled, 0);
+  const details = [
+    `${rows.length} contact${rows.length > 1 ? "s" : ""}`,
+    `${visited} déjà venu${visited > 1 ? "s" : ""} en visite`,
+    `${fresh} nouveau${fresh > 1 ? "x" : ""} ce mois-ci`,
+  ];
+  if (cancelled) details.push(`${cancelled} réservation${cancelled > 1 ? "s" : ""} annulée${cancelled > 1 ? "s" : ""}`);
+  if (optedOut) details.push(`${optedOut} à ne pas contacter`);
+  sheet.getRange(CONTACTS_SUMMARY_ROW, 1)
+    .setValue(`${details.join(" · ")} · mis à jour le ${Utilities.formatDate(new Date(), TIME_ZONE, "dd/MM/yyyy 'à' HH:mm")}`)
+    .setFontWeight("bold").setFontColor(optedOut ? COLORS.clay : COLORS.forest);
+  sheet.getRange(CONTACTS_SUMMARY_ROW + 1, 1)
+    .setValue("Une personne déjà présente n’est jamais réajoutée : seules ses visites sont mises à jour. "
+      + "Une réservation annulée n’est pas comptée comme une visite. « Ne pas contacter » et « Vos notes » sont conservés.")
+    .setFontColor(COLORS.muted);
+}
+
+function contactRow_(record) {
+  const sessions = [...record.sessions.values()];
+  const computed = record.touched;
+  const visitDates = sessions.map((session) => session.date).filter(Boolean).sort();
+  const walks = [...new Set(sessions.map((session) => session.walk).filter(Boolean))];
+  const lastSession = sessions.slice().sort((a, b) => compare_(a.date, b.date) || (a.sort - b.sort))[sessions.length - 1];
+  const firstDate = computed ? (visitDates[0] || "") : record.legacy.firstDate;
+  const lastDate = computed ? (visitDates[visitDates.length - 1] || "") : record.legacy.lastDate;
+  const visits = computed ? sessions.length : record.legacy.visits;
+  const people = computed ? sessions.reduce((total, session) => total + session.people, 0) : record.legacy.people;
+  const walkCount = computed ? walks.length : record.legacy.walks;
+  const lastWalk = computed ? (lastSession ? lastSession.walk : "") : record.legacy.lastWalk;
+  const addedAt = record.addedAt instanceof Date ? record.addedAt : null;
+  return {
+    dateSort: lastDate || "",
+    visits: visits,
+    cancelled: record.cancelled,
+    addedAt: addedAt,
+    optOut: record.optOut,
+    firstName: record.firstName,
+    lastName: record.lastName,
+    values: [
+      record.key,
+      safeSheetText_(record.firstName),
+      safeSheetText_(record.lastName),
+      safeSheetText_(record.email),
+      safeSheetText_(record.altEmails.join(", ")),
+      phoneCell_(record.phone),
+      phoneCell_(record.altPhones.join(", ")),
+      firstDate ? sheetDate_(firstDate) : "",
+      lastDate ? sheetDate_(lastDate) : "",
+      visits,
+      people,
+      walkCount,
+      safeSheetText_(lastWalk),
+      safeSheetText_(record.stage),
+      addedAt || "",
+      record.optOut ? "Oui" : "",
+      safeSheetText_(record.notes),
+    ],
+  };
+}
+
+/** Extrait l’identifiant d’une fiche depuis un lien =HYPERLINK(...). */
+function fileIdFromLink_(value) {
+  const match = String(value == null ? "" : value).match(/\/d\/([A-Za-z0-9_-]{10,})/);
+  return match ? match[1] : "";
+}
+
+function textCell_(value) {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) return isoOf_(value);
+  return String(value).trim();
+}
+
+function phoneText_(value) {
+  return textCell_(value).replace(/^'/, "");
+}
+
+function splitContactsList_(value) {
+  return textCell_(value).split(/[,;]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function normalizeEmail_(value) {
+  return textCell_(value).toLowerCase();
+}
+
+/** Même numéro écrit 06 12…, +33 6 12… ou 0033 6 12… : une seule clé. */
+function normalizePhone_(value) {
+  let digits = textCell_(value).replace(/\D/g, "");
+  if (digits.indexOf("00") === 0) digits = digits.slice(2);
+  if (digits.length === 11 && digits.indexOf("33") === 0) digits = "0" + digits.slice(2);
+  return digits.length >= 8 ? digits : "";
+}
+
 /** Lignes d’un onglet (hors ligne de titres). */
 function readTabRows_(sheet, width) {
+
   const last = sheet.getLastRow();
   if (last < 2) return [];
   return sheet.getRange(2, 1, last - 1, width).getValues()
@@ -1939,7 +2816,17 @@ function pruneProperties_() {
     // 30 jours, quand leur date est passée et ne peut donc plus être envoyée.
     if (key === "mail:daily") return;
     // Réglages et repères du suivi comptable : jamais effacés par le nettoyage.
-    if (key === "ACCOUNTING_ID" || key === "GUIDE_PHONE" || key === "accounting:run") return;
+    if (key === "ACCOUNTING_ID" || key === "CONTACTS_ID" || key === "GUIDE_PHONE") return;
+    if (key === "accounting:run" || key === "contacts:run" || key === "calendar:run") return;
+    if (key === "CALENDAR_ID" || key === "CALENDAR_DISABLED") return;
+    // L’événement d’une date passée reste dans l’agenda ; seul le lien interne est oublié.
+    if (key.indexOf("calendar:") === 0) {
+      const record = parseCalendarRecord_(stored[key]);
+      if (!inProgram[key.slice("calendar:".length)] && (!record || !record.date || record.date < keepFrom)) {
+        store.deleteProperty(key);
+      }
+      return;
+    }
     if (key.indexOf("mail:visit:") === 0) {
       if (stored[key] < keepFrom) store.deleteProperty(key);
       return;
@@ -2018,9 +2905,53 @@ function isoDaysAgo_(days) {
   return Utilities.formatDate(new Date(Date.now() - days * 86400000), TIME_ZONE, "yyyy-MM-dd");
 }
 
+function isoDaysAhead_(days) {
+  return Utilities.formatDate(new Date(Date.now() + days * 86400000), TIME_ZONE, "yyyy-MM-dd");
+}
+
 function parseIsoDate_(iso) {
   const parts = String(iso).split("-").map(Number);
   return { year: parts[0], month: parts[1], day: parts[2] };
+}
+
+// Une date reste affichée 24 h après la fin de la balade, puis disparaît du site.
+const VISIBLE_HOURS_AFTER_END = 24;
+const SLOT_TIME = /(\d{1,2})\s*(?:h|:)\s*(\d{1,2})?/;
+
+/** Horaires (début, fin) d’un créneau « 10 h 30–12 h » ; 10 h 30–12 h par défaut. */
+function slotBounds_(slot) {
+  const parts = String(slot || "").split(/\s*[–—-]\s*/);
+  const read = (value, fallback) => {
+    const match = SLOT_TIME.exec(value || "");
+    if (!match) return fallback;
+    const hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    return hour <= 23 && minute <= 59 ? [hour, minute] : fallback;
+  };
+  const start = read(parts[0], [10, 30]);
+  let end = read(parts[1], [12, 0]);
+  if (end[0] * 60 + end[1] <= start[0] * 60 + start[1]) {
+    end = [(start[0] + 1) % 24, start[1]];
+  }
+  return { start: start, end: end };
+}
+
+function sessionStartDate_(session) {
+  const day = parseIsoDate_(session.date);
+  const start = slotBounds_(session.slot).start;
+  return new Date(day.year, day.month - 1, day.day, start[0], start[1], 0);
+}
+
+function sessionEndDate_(session) {
+  const day = parseIsoDate_(session.date);
+  const end = slotBounds_(session.slot).end;
+  return new Date(day.year, day.month - 1, day.day, end[0], end[1], 0);
+}
+
+/** Vrai 24 h après la fin de la balade : la date n’est plus proposée ni affichée. */
+function sessionHidden_(session, now) {
+  const moment = now || Date.now();
+  return moment >= sessionEndDate_(session).getTime() + VISIBLE_HOURS_AFTER_END * 3600000;
 }
 
 /** Date affichable dans Sheets (midi, pour éviter tout décalage de fuseau). */

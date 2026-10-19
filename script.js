@@ -78,15 +78,91 @@ if (menuToggle && navigation) {
   });
 }
 
+// Heure de Paris : la règle est la même pour tous, y compris un iPhone réglé sur
+// un autre fuseau. Repli sur l’heure de l’appareil si Intl n’est pas disponible.
+const PARIS_FORMAT = (() => {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Paris", hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    });
+  } catch (error) {
+    return null;
+  }
+})();
+
+function parisParts(moment) {
+  if (!PARIS_FORMAT) {
+    const date = new Date(moment);
+    return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), hour: date.getHours(), minute: date.getMinutes() };
+  }
+  const parts = {};
+  PARIS_FORMAT.formatToParts(new Date(moment)).forEach((part) => { parts[part.type] = part.value; });
+  return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day), hour: Number(parts.hour) % 24, minute: Number(parts.minute) };
+}
+
+/** Instant (ms) d’une heure murale de Paris. */
+function parisMoment(year, month, day, hour, minute) {
+  const guess = Date.UTC(year, month - 1, day, hour, minute);
+  if (!PARIS_FORMAT) return new Date(year, month - 1, day, hour, minute).getTime();
+  const offset = (moment) => {
+    const parts = parisParts(moment);
+    return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) - Math.floor(moment / 60000) * 60000;
+  };
+  const first = offset(guess);
+  const result = guess - first;
+  const second = offset(result);
+  return second === first ? result : guess - second;
+}
+
 const localToday = () => {
+  const parts = PARIS_FORMAT ? parisParts(Date.now()) : null;
+  if (parts) return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
 if (dateInput) dateInput.min = localToday();
 
+// Une date reste affichée 24 h après la fin de la balade, puis disparaît du site.
+const VISIBLE_HOURS_AFTER_END = 24;
+const SLOT_TIME = /(\d{1,2})\s*(?:h|:)\s*(\d{1,2})?/;
+
+function slotBounds(slot) {
+  const parts = String(slot || "").split(/\s*[–—-]\s*/);
+  const read = (value, fallback) => {
+    const match = SLOT_TIME.exec(value || "");
+    if (!match) return fallback;
+    const hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    return hour <= 23 && minute <= 59 ? [hour, minute] : fallback;
+  };
+  const start = read(parts[0], [10, 30]);
+  let end = read(parts[1], [12, 0]);
+  if (end[0] * 60 + end[1] <= start[0] * 60 + start[1]) end = [(start[0] + 1) % 24, start[1]];
+  return { start, end };
+}
+
+function sessionEndMoment(isoDate, slot) {
+  if (!isoDate) return null;
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const { end } = slotBounds(slot);
+  return parisMoment(year, month, day, end[0], end[1]);
+}
+
+function sessionHideMoment(isoDate, slot) {
+  const end = sessionEndMoment(isoDate, slot);
+  return end === null ? null : end + VISIBLE_HOURS_AFTER_END * 3_600_000;
+}
+
+function sessionIsHidden(isoDate, slot, now = Date.now()) {
+  const moment = sessionHideMoment(isoDate, slot);
+  return moment !== null && now >= moment;
+}
+
 document.querySelectorAll("[data-program-date]").forEach((date) => {
   const isoDate = date.dataset.programDate || date.dateTime;
-  if (isoDate && isoDate < localToday()) date.hidden = true;
+  const slot = date.dataset.slot || date.closest("[data-program-card]")?.dataset.slot || "";
+  if (isoDate && sessionIsHidden(isoDate, slot)) date.hidden = true;
 });
 
 const programCards = [...document.querySelectorAll("[data-program-card]")];
@@ -96,15 +172,86 @@ const programSearchInput = document.querySelector("#program-search");
 const programFilterButtons = [...document.querySelectorAll("[data-program-filter]")];
 const availableFilterButton = document.querySelector('[data-program-filter="available"]');
 const programResultCount = document.querySelector("#program-result-count");
+const nextWalkBanner = document.querySelector("#prochaine-balade");
+const nextWalkCta = nextWalkBanner?.querySelector("[data-next-walk-cta]");
+const bookingRecap = document.querySelector("#booking-recap");
 const clearProgramFiltersButton = document.querySelector("#clear-program-filters");
 let activeProgramFilter = "all";
 
-programCards.forEach((card) => {
-  const hasUpcoming = Boolean(card.querySelector("[data-program-date]:not([hidden])"));
-  card.dataset.hasUpcoming = String(hasUpcoming);
-  card.hidden = !hasUpcoming;
-});
+// Une balade dont toutes les dates sont passées reste au programme : seules les
+// dates disparaissent (24 h après la balade). L’offre de la saison reste à 13 balades.
+function refreshProgramCard(card) {
+  const upcoming = [...card.querySelectorAll("[data-program-date]:not([hidden])")];
+  card.dataset.hasUpcoming = String(upcoming.length > 0);
+  // Sans date à venir, la balade reste au programme avec une phrase à la place des dates.
+  const container = card.querySelector(".program-dates");
+  if (!container) return;
+  const note = container.querySelector(".program-no-date");
+  if (!upcoming.length && !note) {
+    const message = document.createElement("p");
+    message.className = "program-no-date";
+    message.textContent = "Aucune date programmée pour le moment.";
+    container.append(message);
+  } else if (upcoming.length && note) {
+    note.remove();
+  }
+}
+programCards.forEach(refreshProgramCard);
 if (availableFilterButton) availableFilterButton.disabled = true;
+
+// « 13 balades » est l’offre de la saison : le nombre ne baisse pas quand une date passe.
+// Seul le nombre de dates à venir évolue, et il disparaît 24 h après chaque balade.
+function updateProgramCounts() {
+  const dates = programCards.reduce((total, card) => total + card.querySelectorAll("[data-program-date]:not([hidden])").length, 0);
+  const datesOutput = document.querySelector("[data-count-dates]");
+  if (datesOutput) datesOutput.textContent = String(dates);
+}
+
+// Raccourci vers la date la plus proche encore réservable.
+function updateNextWalk() {
+  if (!nextWalkBanner) return;
+  const now = Date.now();
+  const entries = programCards
+    .flatMap((card) => [...card.querySelectorAll("[data-program-date]:not([hidden])")]
+      .map((lien) => ({ card, lien })))
+    // Une date encore affichée 24 h après la balade n’est plus « la prochaine ».
+    .filter(({ lien, card }) => {
+      const end = sessionEndMoment(lien.dataset.programDate || lien.dateTime, lien.dataset.slot || card.dataset.slot || "");
+      return end !== null && end > now;
+    })
+    .sort((a, b) => (a.lien.dataset.programDate || "").localeCompare(b.lien.dataset.programDate || ""));
+  if (!entries.length) {
+    nextWalkBanner.hidden = true;
+    return;
+  }
+  const available = entries.find(({ lien }) => lien.dataset.soldOut === "false");
+  const choice = available || entries[0];
+  const walk = choice.lien.dataset.walk || choice.card.dataset.walk || "";
+  const date = choice.lien.dataset.programDate || "";
+  const slot = choice.lien.dataset.slot || choice.card.dataset.slot || "";
+  const fullDate = choice.lien.dataset.fullDate || date;
+  const weekday = choice.lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
+  const places = choice.lien.querySelector("[data-availability-label]")?.textContent?.trim() || "";
+  nextWalkBanner.hidden = false;
+  nextWalkBanner.classList.toggle("is-complete", !available);
+  const title = nextWalkBanner.querySelector("#next-walk-title");
+  const dateOutput = nextWalkBanner.querySelector("[data-next-walk-date]");
+  const placesOutput = nextWalkBanner.querySelector("[data-next-walk-places]");
+  if (title) title.textContent = walk;
+  if (dateOutput) dateOutput.textContent = `${weekday} ${fullDate}`.trim();
+  if (placesOutput) placesOutput.textContent = available ? places : "complet";
+  if (nextWalkCta) {
+    nextWalkCta.dataset.walk = walk;
+    nextWalkCta.dataset.date = date;
+    nextWalkCta.dataset.slot = slot;
+    nextWalkCta.dataset.interest = PUBLIC_TOPIC;
+    const details = nextWalkCta.querySelector("[data-next-walk-details]");
+    if (details) details.textContent = ` : ${walk}, ${fullDate}`;
+    nextWalkCta.removeAttribute("aria-label");
+  }
+}
+updateProgramCounts();
+updateNextWalk();
 
 // ------------------------------------------------------------------ Les prochaines balades, en carrousel
 const inspirationTrack = document.querySelector("#inspiration-track");
@@ -156,6 +303,10 @@ function buildInspirationTrack() {
     const slot = card.dataset.slot || "";
     const image = card.dataset.image || "";
     const imageAlt = card.dataset.imageAlt || walk;
+    const imageStem = image.split("/").pop().replace(/\.jpg$/i, "");
+    const imageWebp = imageStem
+      ? `<source type="image/webp" sizes="(max-width: 560px) 86vw, (max-width: 980px) 45vw, 380px" srcset="assets/responsive/${escapeHtml(imageStem)}-400.webp 400w, assets/responsive/${escapeHtml(imageStem)}-800.webp 800w">`
+      : "";
     const summary = card.dataset.summary || "";
     const kind = card.querySelector(".program-kind")?.textContent?.trim() || "";
     const numero = String(index + 1).padStart(2, "0");
@@ -173,15 +324,16 @@ function buildInspirationTrack() {
       const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
       const mois = lien.querySelector(".program-date-month")?.textContent?.trim() || "";
       return `
-        <a class="next-card-date-pill" href="#contact" data-next-date-index="${idx}" data-interest="${escapeHtml(PUBLIC_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(slot)}" aria-label="Réserver une place pour ${escapeHtml(walk)} le ${escapeHtml(dateComplete)}">
+        <a class="next-card-date-pill" href="#contact" data-next-date-index="${idx}" data-interest="${escapeHtml(PUBLIC_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(slot)}">
           <span class="next-card-date-chip"><b>${escapeHtml(jour)}</b> ${escapeHtml(weekday)} ${escapeHtml(mois)}</span>
           <span class="next-card-places" data-next-places>Chargement…</span>
+          <span class="visually-hidden" data-next-details>${escapeHtml(walk)} — ${escapeHtml(dateComplete)}</span>
         </a>`;
     }).join("");
 
     carte.innerHTML = `
       <div class="next-card-media">
-        <img class="next-card-image" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" loading="lazy">
+        <picture>${imageWebp}<img class="next-card-image" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" loading="lazy" decoding="async"></picture>
         <span class="next-card-badge">${escapeHtml(numero)}</span>
         <span class="next-card-period">${escapeHtml(periode)}</span>
       </div>
@@ -210,6 +362,8 @@ function syncInspirationTrack() {
       const source = lien.querySelector("[data-availability-label]");
       const cible = pilule.querySelector("[data-next-places]");
       if (source && cible) cible.textContent = source.textContent;
+      const details = pilule.querySelector("[data-next-details]");
+      if (details && source) details.textContent = source.textContent;
       const complet = lien.dataset.soldOut === "true";
       pilule.classList.toggle("is-sold-out", complet);
       pilule.dataset.soldOut = complet ? "true" : "";
@@ -321,7 +475,32 @@ function estimateFare(ageGroups) {
   return Object.entries(AGE_GROUP_PRICES).reduce((total, [group, price]) => total + ageGroups[group] * price, 0);
 }
 
+// Rappel du choix au-dessus du bouton : balade, date, personnes et estimation.
+function updateBookingRecap() {
+  if (!bookingRecap) return;
+  const session = sessionsById.get(sessionSelect?.value || "");
+  const { ageGroups } = readAgeGroups();
+  const total = ageGroupTotal(ageGroups);
+  if (!isPublicBooking() || !session) {
+    bookingRecap.hidden = true;
+    bookingRecap.replaceChildren();
+    return;
+  }
+  const amount = estimateFare(ageGroups);
+  bookingRecap.hidden = false;
+  bookingRecap.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = session.walk;
+  bookingRecap.append(
+    "Votre réservation : ",
+    title,
+    ` — ${formatFrenchDate(session.date)}, ${session.slot} · ${pluralPlaces(session.remaining)} restantes`,
+    total > 0 ? ` · ${total} personne${total > 1 ? "s" : ""} · ${amount} € (estimation)` : " · indiquez votre groupe",
+  );
+}
+
 function updateAgeEstimate() {
+  updateBookingRecap();
   if (!ageGroupInputs.length) return;
   const { ageGroups, valid } = readAgeGroups();
   const total = ageGroupTotal(ageGroups);
@@ -380,12 +559,16 @@ function applyProgramFilters() {
   let visibleCount = 0;
   let visibleDateCount = 0;
 
+  // Programme terminé : plus aucune date à venir, on affiche le message de fin de saison.
+  const seasonOver = !programCards.some((card) => card.dataset.hasUpcoming === "true");
+
   programCards.forEach((card) => {
-    if (card.dataset.hasUpcoming !== "true") {
+    if (seasonOver) {
       card.hidden = true;
       return;
     }
-    upcomingCount += 1;
+    const hasUpcoming = card.dataset.hasUpcoming === "true";
+    if (hasUpcoming) upcomingCount += 1;
     const searchableText = normalizeSearchText(`${card.querySelector("h3")?.textContent || ""} ${card.querySelector(".program-kind")?.textContent || ""}`);
     const matchesSearch = !query || searchableText.includes(query);
     const upcomingDates = [...card.querySelectorAll("[data-program-date]:not([hidden])")];
@@ -399,21 +582,21 @@ function applyProgramFilters() {
     }
   });
 
-  if (programEmpty) programEmpty.hidden = upcomingCount > 0;
-  if (programFilterEmpty) programFilterEmpty.hidden = upcomingCount === 0 || visibleCount > 0;
+  if (programEmpty) programEmpty.hidden = !seasonOver;
+  if (programFilterEmpty) programFilterEmpty.hidden = seasonOver || visibleCount > 0;
   if (programResultCount) {
-    if (upcomingCount === 0) {
+    if (seasonOver) {
       programResultCount.textContent = "Aucune date à venir.";
     } else if (activeProgramFilter === "available") {
       programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} · ${visibleDateCount} date${visibleDateCount > 1 ? "s" : ""} avec des places`;
     } else if (query) {
       programResultCount.textContent = `${visibleCount} résultat${visibleCount > 1 ? "s" : ""} pour « ${programSearchInput.value.trim()} »`;
     } else if (availabilityError) {
-      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} à venir · disponibilités momentanément indisponibles`;
+      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} · disponibilités momentanément indisponibles`;
     } else if (availabilityLoaded) {
-      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} · ${visibleDateCount} date${visibleDateCount > 1 ? "s" : ""} à venir`;
+      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} · ${visibleDateCount} date${visibleDateCount > 1 ? "s" : ""} au programme`;
     } else {
-      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} à venir · chargement des places…`;
+      programResultCount.textContent = `${visibleCount} balade${visibleCount > 1 ? "s" : ""} · chargement des places…`;
     }
   }
 }
@@ -431,6 +614,7 @@ if (clearProgramFiltersButton) {
 function findSessionForTarget(target) {
   if (!target?.walk) return null;
   const matches = availabilitySessions.filter((session) => {
+    if (session.ended) return false;
     if (session.walk !== target.walk) return false;
     if (target.date && session.date !== target.date) return false;
     if (target.slot && session.slot !== target.slot) return false;
@@ -472,10 +656,11 @@ function renderSessionOptions(preferredId = "") {
   sessionSelect.replaceChildren();
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = availabilitySessions.length ? "Choisissez une balade et une date" : "Aucune date à réserver pour le moment";
+  placeholder.textContent = availabilitySessions.length ? "Choisissez une balade" : "Aucune date pour le moment";
   sessionSelect.append(placeholder);
 
   availabilitySessions.forEach((session) => {
+    if (session.ended) return; // une balade terminée n’est plus proposée à la réservation
     const option = document.createElement("option");
     option.value = session.id;
     option.disabled = session.remaining <= 0;
@@ -524,46 +709,172 @@ function updateProgramAvailability() {
       delete link.dataset.sessionId;
       return;
     }
-    const available = session.remaining > 0;
-    if (label) label.textContent = available ? `${session.remaining} place${session.remaining > 1 ? "s" : ""}` : "Complet";
+    const ended = session.ended === true || (sessionEndMoment(date, slot) || 0) <= Date.now();
+    const available = !ended && session.remaining > 0;
+    if (label) label.textContent = ended ? "Terminée" : available ? `${session.remaining} place${session.remaining > 1 ? "s" : ""}` : "Complet";
     link.classList.toggle("is-sold-out", !available);
+    link.classList.toggle("is-ended", ended);
     link.classList.remove("is-unavailable");
     link.dataset.soldOut = String(!available);
+    link.dataset.ended = String(ended);
     link.dataset.sessionId = session.id;
     link.setAttribute("aria-disabled", String(!available));
     if (!available) link.tabIndex = -1;
     else link.removeAttribute("tabindex");
     const dateLabel = link.dataset.fullDate || link.querySelector("time")?.textContent || date;
-    link.setAttribute("aria-label", `${walk}, le ${dateLabel} : ${available ? `${pluralPlaces(session.remaining)} restantes sur ${session.capacity}` : "complet"}.`);
+    const details = link.querySelector("[data-availability-details]");
+    if (details) {
+      const state = ended ? "terminée" : available ? `${pluralPlaces(session.remaining)} restantes sur ${session.capacity}, réserver` : "complet";
+      details.textContent = `${walk} — ${dateLabel} : ${state}.`;
+    }
   });
 
   programCards.forEach((card) => {
     const dates = [...card.querySelectorAll("[data-program-date]:not([hidden])")];
+    const noDate = dates.length === 0;
     const allFull = dates.length > 0 && dates.every((link) => link.dataset.soldOut === "true");
+    const allEnded = allFull && dates.every((link) => link.dataset.ended === "true");
     const cta = card.querySelector(".program-cta");
     if (cta) {
+      // Sans date à venir, la balade reste au programme : on invite à en demander une.
+      cta.dataset.interest = noDate ? "J’ai une autre question" : PUBLIC_TOPIC;
       cta.dataset.allSoldOut = String(allFull);
       cta.setAttribute("aria-disabled", String(allFull));
       if (allFull) cta.tabIndex = -1;
       else cta.removeAttribute("tabindex");
       if (cta.firstChild?.nodeType === Node.TEXT_NODE) {
-        cta.firstChild.textContent = allFull ? "Toutes les dates sont complètes " : "Réserver une place ";
+        cta.firstChild.textContent = noDate ? "Demander une prochaine date " : allEnded ? "Dates terminées " : allFull ? "Toutes les dates sont complètes " : "Réserver une place ";
       }
     }
   });
   if (availableFilterButton) availableFilterButton.disabled = !availabilityLoaded;
   applyProgramFilters();
   syncInspirationTrack();
+  updateNextWalk();
+  updateProgramCounts();
 }
 
 function renderAvailability(payload) {
-  availabilitySessions = (payload.sessions || []).filter((session) => session.date >= localToday());
+  availabilitySessions = (payload.sessions || []).filter((session) => !sessionIsHidden(session.date, session.slot));
   sessionsById.clear();
   availabilitySessions.forEach((session) => sessionsById.set(session.id, session));
   availabilityLoaded = true;
   availabilityError = false;
   updateProgramAvailability();
   renderSessionOptions();
+}
+
+// ------------------------------------------------------------------ Agenda Google
+// Le programme du site reste la base : si l’agenda est injoignable (hors ligne,
+// iPhone en veille, service indisponible), rien ne change. Quand il répond, ses
+// dates corrigent l’affichage : une date supprimée dans l’agenda disparaît, une
+// date ajoutée ou déplacée apparaît. Aucune donnée personnelle n’est lue.
+let agendaApplied = false;
+
+const agendaKey = (date, walk) => `${date}|${walk}`;
+
+/** Ajoute la pastille d’une date venue de l’agenda, à sa place chronologique. */
+function addAgendaDate(card, session) {
+  const container = card.querySelector(".program-dates");
+  const template = card.querySelector("[data-program-date]");
+  if (!container || !template) return null;
+  const link = template.cloneNode(true);
+  link.hidden = false;
+  delete link.dataset.sessionId;
+  delete link.dataset.agendaRemoved;
+  link.dataset.soldOut = "";
+  link.dataset.ended = "false";
+  link.removeAttribute("aria-disabled");
+  link.removeAttribute("tabindex");
+  link.classList.remove("is-sold-out", "is-ended", "is-unavailable");
+  link.dataset.programDate = session.date;
+  link.dataset.date = session.date;
+  link.dataset.walk = session.walk;
+  link.dataset.slot = session.slot;
+  link.dataset.fullDate = formatFrenchDate(session.date, false);
+  const [year, month, day] = session.date.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const time = link.querySelector("time");
+  if (time) time.setAttribute("datetime", session.date);
+  const dayOutput = link.querySelector(".program-date-day");
+  if (dayOutput) dayOutput.textContent = String(day);
+  const weekdayOutput = link.querySelector(".program-date-weekday");
+  if (weekdayOutput) {
+    weekdayOutput.textContent = new Intl.DateTimeFormat("fr-FR", { weekday: "short", timeZone: "UTC" }).format(date).replace(".", "");
+  }
+  const monthOutput = link.querySelector(".program-date-month");
+  if (monthOutput) monthOutput.textContent = new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" }).format(date);
+  const label = link.querySelector("[data-availability-label]");
+  if (label) label.textContent = "Chargement…";
+  const details = link.querySelector("[data-availability-details]");
+  if (details) details.textContent = "Réserver cette balade";
+  const next = [...container.querySelectorAll("[data-program-date]:not([hidden])")]
+    .find((other) => (other.dataset.programDate || "") > session.date);
+  container.insertBefore(link, next || null);
+  return link;
+}
+
+/** Applique la liste des dates de l’agenda ; renvoie vrai si l’affichage change. */
+function applyAgendaSessions(sessions) {
+  if (agendaApplied) return false;
+  agendaApplied = true;
+  const wanted = new Map();
+  sessions.forEach((session) => {
+    if (!session || !/^\d{4}-\d{2}-\d{2}$/.test(session.date || "") || !session.walk) return;
+    wanted.set(agendaKey(session.date, session.walk), session);
+  });
+  if (!wanted.size) return false;
+  let changed = false;
+  programCards.forEach((card) => {
+    const walk = card.dataset.walk || "";
+    const present = new Set();
+    [...card.querySelectorAll("[data-program-date]")].forEach((link) => {
+      const date = link.dataset.programDate || "";
+      if (!wanted.has(agendaKey(date, link.dataset.walk || walk))) {
+        // Supprimée ou déplacée dans l’agenda : elle quitte le site.
+        if (!link.hidden) {
+          link.hidden = true;
+          changed = true;
+        }
+        link.dataset.agendaRemoved = "true";
+      } else {
+        present.add(date);
+      }
+    });
+    [...wanted.values()]
+      .filter((session) => session.walk === walk && !present.has(session.date)
+        && !sessionIsHidden(session.date, session.slot))
+      .forEach((session) => {
+        addAgendaDate(card, session);
+        changed = true;
+      });
+    refreshProgramCard(card);
+  });
+  if (!changed) return false;
+  updateProgramCounts();
+  updateNextWalk();
+  buildInspirationTrack();
+  applyProgramFilters();
+  updateProgramAvailability();
+  loadAvailability(); // places des dates ajoutées dans l’agenda
+  return true;
+}
+
+/** Lit les dates de l’agenda (facultatif : le site fonctionne sans). */
+async function loadAgendaSchedule() {
+  try {
+    const response = await fetch(ACTIVE_API_URL ? `${ACTIVE_API_URL}?api=schedule` : "/api/schedule", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    if (!payload || payload.agenda !== true || !Array.isArray(payload.sessions)) return;
+    applyAgendaSessions(payload.sessions);
+  } catch (error) {
+    // Hors ligne, service indisponible ou agenda vide : le programme statique reste.
+    console.info("Agenda non consulté : le programme du site reste affiché.", error);
+  }
 }
 
 async function loadAvailability() {
@@ -771,6 +1082,7 @@ async function submitPublicBooking(values) {
       body: JSON.stringify({
         session_id: session.id, first_name: firstName, last_name: lastName,
         email, phone, message, participants, age_groups: ageGroups,
+        website: String(values.get("website") || ""),
       }),
     });
     const result = await response.json();
@@ -849,6 +1161,7 @@ async function submitCustomRequest(values) {
         slot,
         participants,
         message,
+        website: String(values.get("website") || ""),
       }),
     });
     const result = await response.json();
@@ -886,6 +1199,7 @@ if (contactForm && formStatus) {
 applyProgramFilters();
 updateBookingMode();
 loadAvailability();
+loadAgendaSchedule();
 // Google Apps Script : interrogé moins souvent pour rester dans les quotas gratuits.
 window.setInterval(loadAvailability, ACTIVE_API_URL ? 120_000 : 30_000);
 window.addEventListener("focus", loadAvailability);
@@ -924,7 +1238,10 @@ function openLegalDialog(articleId) {
   const target = articleId || legalRailLinks[0]?.dataset.legalJump;
   if (!legalDialog.open) {
     if (typeof legalDialog.showModal === "function") legalDialog.showModal();
-    else legalDialog.setAttribute("open", "");
+    else {
+      legalDialog.classList.add("is-fallback");
+      legalDialog.setAttribute("open", "");
+    }
   }
   if (target) {
     window.requestAnimationFrame(() => {
@@ -939,6 +1256,7 @@ function closeLegalDialog() {
   if (!legalDialog?.open) return;
   if (typeof legalDialog.close === "function") legalDialog.close();
   else {
+    legalDialog.classList.remove("is-fallback");
     legalDialog.removeAttribute("open");
     legalDialog.dispatchEvent(new window.Event("close"));
   }
@@ -1048,7 +1366,10 @@ function openWalkDialog(walkName) {
 
   if (!walkDialog.open) {
     if (typeof walkDialog.showModal === "function") walkDialog.showModal();
-    else walkDialog.setAttribute("open", "");
+    else {
+      walkDialog.classList.add("is-fallback");
+      walkDialog.setAttribute("open", "");
+    }
   }
   if (walkDialogContent) walkDialogContent.scrollTop = 0;
   walkDialog.querySelector("[data-walk-close]")?.focus();
@@ -1058,6 +1379,7 @@ function closeWalkDialog() {
   if (!walkDialog?.open) return;
   if (typeof walkDialog.close === "function") walkDialog.close();
   else {
+    walkDialog.classList.remove("is-fallback");
     walkDialog.removeAttribute("open");
     walkDialog.dispatchEvent(new window.Event("close"));
   }
