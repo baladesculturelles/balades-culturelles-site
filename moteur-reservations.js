@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "7ad2a3f2c6";
+const ENGINE_VERSION = "222ba514f0";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -116,8 +116,10 @@ const DASHBOARD_HEADERS = Object.freeze([
 ]);
 const JOURNAL_HEADERS = Object.freeze([
   "Réservée le", "Date de la balade", "Balade", "Horaire", "Référence", "Nom", "E-mail", "Téléphone",
-  "Personnes", "Montant estimé (€)", "Fiche de la date", "Message du client", "Prénom",
+  "Personnes", "Montant estimé (€)", "Fiche de la date", "Message du client", "Prénom", "Échec e-mail", "Clé d’idempotence",
 ]);
+const JOURNAL_EMAIL_FAILURE_COLUMN = 14;
+const JOURNAL_IDEMPOTENCY_COLUMN = 15;
 
 /* ------------------------------------------------------------------ */
 /* Google Agenda (facultatif)                                         */
@@ -547,6 +549,7 @@ function doPost(e) {
       phone: body.phone,
       message: body.message,
       participants: body.participants,
+      idempotencyKey: body.idempotency_key,
       ageGroups: body.age_groups,
     });
     return jsonOutput_({
@@ -834,6 +837,7 @@ function createBooking_(payload) {
   const phone = cleanText_(payload.phone, 40);
   const message = cleanText_(payload.message, 1000);
   const sessionId = cleanText_(payload.sessionId, 600);
+  const idempotencyKey = cleanText_(payload.idempotencyKey, 100);
 
   if (!legacy) {
     if (!firstName) throw new Error("Saisissez votre prénom.");
@@ -872,8 +876,28 @@ function createBooking_(payload) {
     const sheet = visitSheet_(visit);
 
     // La fiche fait foi : on recompte ses lignes, y compris vos ajouts ou annulations manuels.
-    const stats = countStats_(readVisitRows_(sheet));
+    const visitEntries = readVisitEntries_(sheet);
+    const stats = countStats_(visitEntries.map((entry) => entry.values));
     const remaining = capacity - stats.booked;
+
+    // Le journal est inséré en tête : seules ses 200 lignes les plus récentes sont relues.
+    // La recherche reste sous le verrou commun, avant toute écriture et avant la référence.
+    const duplicate = findRecentJournalDuplicate_(dashboard, session, email, visitEntries, Date.now(), idempotencyKey);
+    if (duplicate) {
+      return {
+        ok: true,
+        reference: duplicate.reference,
+        walk: session.walk,
+        date: session.date,
+        slot: session.slot,
+        participants: duplicate.participants,
+        capacity: capacity,
+        remaining: Math.max(0, remaining),
+        ageGroups: duplicate.ageGroups || ageGroups,
+        priceEstimate: duplicate.priceEstimate,
+      };
+    }
+
     if (participants > remaining) {
       throw new Error(`Il ne reste que ${Math.max(0, remaining)} place(s) pour cette visite. Choisissez une autre date ou réduisez le nombre de personnes.`);
     }
@@ -922,7 +946,7 @@ function createBooking_(payload) {
     // ne doit pas la faire échouer (la synchronisation suivante rattrapera).
     try {
       addJournalRow_(dashboard, session, visit.getUrl(), {
-        createdAt, reference, name, firstName, email, phone, participants, priceEstimate, message,
+        createdAt, reference, name, firstName, email, phone, participants, priceEstimate, message, idempotencyKey,
       });
       writeDashboard_(dashboard);
     } catch (error) {
@@ -941,6 +965,7 @@ function createBooking_(payload) {
       participants: participants,
       priceEstimate: priceEstimate,
       sheet: sheet,
+      dashboard: dashboard,
     });
     // Agenda de la guide : la date et le nombre de places suivent la réservation.
     syncCalendarSafely_(session.id);
@@ -958,6 +983,68 @@ function createBooking_(payload) {
       priceEstimate: priceEstimate,
     };
   });
+}
+
+/** Date du journal comparée à l’identifiant de séance (Sheets renvoie généralement un Date). */
+function journalDateMatches_(value, isoDate) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Utilities.formatDate(value, TIME_ZONE, "yyyy-MM-dd") === isoDate;
+  }
+  return String(value == null ? "" : value).trim() === isoDate;
+}
+
+/**
+ * Cherche un doublon récent dans les 200 entrées les plus récentes du journal.
+ * Une ligne annulée dans la fiche de date n’est pas considérée comme active.
+ */
+function idempotencyHash_(value) {
+  const key = cleanText_(value, 100);
+  if (!key) return "";
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, key, Utilities.Charset.UTF_8);
+  return digest.map((byte) => ((byte + 256) % 256).toString(16).padStart(2, "0")).join("");
+}
+
+function findRecentJournalDuplicate_(dashboard, session, email, visitEntries, nowMs, idempotencyKey) {
+  const journal = dashboard.getSheetByName(JOURNAL_SHEET);
+  if (!journal) return null;
+  const count = Math.min(200, journal.getLastRow() - 1);
+  if (count < 1) return null;
+
+  const emailKey = cleanText_(email, 254).toLowerCase();
+  const idempotencyHash = idempotencyHash_(idempotencyKey);
+  const rows = journal.getRange(2, 1, count, JOURNAL_HEADERS.length).getValues();
+  for (const row of rows) {
+    const storedHash = String(row[JOURNAL_IDEMPOTENCY_COLUMN - 1] || "").trim();
+    const sameKey = Boolean(idempotencyHash && storedHash === idempotencyHash);
+    if (!journalDateMatches_(row[1], session.date)) continue;
+    if (String(row[2] || "") !== session.walk || String(row[3] || "") !== session.slot) continue;
+
+    if (!sameKey) {
+      if (cleanText_(row[6], 254).toLowerCase() !== emailKey) continue;
+      const createdAt = row[0] instanceof Date ? row[0].getTime() : Date.parse(String(row[0] || ""));
+      const ageMs = nowMs - createdAt;
+      if (!Number.isFinite(createdAt) || ageMs < 0 || ageMs >= 120000) continue;
+    }
+
+    const reference = String(row[4] || "").trim();
+    if (!reference) continue;
+    const visitEntry = visitEntries.find((entry) => String(entry.values[0] || "").trim() === reference);
+    if (visitEntry && String(visitEntry.values[VISIT_COL.status - 1] || "").trim() === CANCELLED) continue;
+
+    const values = visitEntry && visitEntry.values;
+    return {
+      reference: reference,
+      participants: Number(row[8]) || 0,
+      priceEstimate: Number(row[9]) || 0,
+      ageGroups: values ? {
+        standard: Number(values[5]) || 0,
+        youth: Number(values[6]) || 0,
+        child: Number(values[7]) || 0,
+        underFive: Number(values[8]) || 0,
+      } : null,
+    };
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1293,6 +1380,7 @@ function setupDashboard_(dashboard) {
   journal.getRange(2, 1, journalRows, 1).setNumberFormat("dd/mm/yyyy hh:mm");
   journal.getRange(2, 2, journalRows, 1).setNumberFormat("ddd dd/mm/yyyy");
   [130, 130, 280, 110, 130, 170, 220, 130, 90, 120, 150].forEach((size, index) => journal.setColumnWidth(index + 1, size));
+  journal.setColumnWidth(JOURNAL_EMAIL_FAILURE_COLUMN, 180);
 }
 
 /**
@@ -1391,9 +1479,24 @@ function addJournalRow_(dashboard, session, visitUrl, booking) {
     `=HYPERLINK("${visitUrl}";"Ouvrir la fiche")`,
     safeSheetText_(booking.message || ""),
     safeSheetText_(booking.firstName || ""),
+    "",
+    idempotencyHash_(booking.idempotencyKey),
   ]]).setFontWeight("normal").setFontColor("#242a23").setBackground(null);
   sheet.getRange(2, 1).setNumberFormat("dd/mm/yyyy hh:mm");
   sheet.getRange(2, 2).setNumberFormat("ddd dd/mm/yyyy");
+}
+
+/** Signale dans le journal, sans échec en cascade, une confirmation non envoyée. */
+function markJournalEmailFailure_(dashboard, reference) {
+  if (!dashboard || !reference) return;
+  const journal = dashboard.getSheetByName(JOURNAL_SHEET);
+  if (!journal) return;
+  const count = Math.min(200, journal.getLastRow() - 1);
+  if (count < 1) return;
+  const references = journal.getRange(2, 5, count, 1).getValues();
+  const index = references.findIndex((row) => String(row[0] || "").trim() === reference);
+  if (index < 0) return;
+  journal.getRange(index + 2, JOURNAL_EMAIL_FAILURE_COLUMN).setValue("Échec d’envoi");
 }
 
 /* ------------------------------------------------------------------ */
@@ -1415,6 +1518,11 @@ function sendConfirmationEmail_(booking) {
     });
   } catch (error) {
     console.error("E-mail de confirmation non envoyé pour " + booking.reference + " : " + error);
+    try {
+      markJournalEmailFailure_(booking.dashboard, booking.reference);
+    } catch (journalError) {
+      console.error("Échec du signalement dans le journal pour " + booking.reference + " : " + journalError);
+    }
   }
 }
 

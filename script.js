@@ -50,6 +50,8 @@ const sessionsById = new Map();
 let pendingSessionTarget = null;
 let availabilityError = false;
 let ageGroupsTouched = false;
+let bookingIdempotencyKey = "";
+let bookingIdempotencyFingerprint = "";
 
 if (header) {
   const updateHeader = () => header.classList.toggle("is-scrolled", window.scrollY > 12);
@@ -661,6 +663,64 @@ function ageGroupTotal(ageGroups) {
   return Object.values(ageGroups).reduce((total, count) => total + count, 0);
 }
 
+const BOOKING_IDEMPOTENCY_STORAGE_KEY = "balades-booking-idempotency";
+
+function createBookingIdempotencyKey() {
+  if (typeof window.crypto?.randomUUID === "function") return window.crypto.randomUUID();
+  if (typeof window.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function clearBookingIdempotencyKey() {
+  bookingIdempotencyKey = "";
+  bookingIdempotencyFingerprint = "";
+  try {
+    window.sessionStorage.removeItem(BOOKING_IDEMPOTENCY_STORAGE_KEY);
+  } catch (_) {
+    // Le repli en mémoire reste utilisable si le stockage du navigateur est bloqué.
+  }
+}
+
+function syncBookingIdempotencySelection(sessionId, participants) {
+  const fingerprint = JSON.stringify([sessionId || "", participants]);
+  if (bookingIdempotencyKey && bookingIdempotencyFingerprint !== fingerprint) {
+    clearBookingIdempotencyKey();
+  }
+}
+
+function getBookingIdempotencyKey(sessionId, participants) {
+  const fingerprint = JSON.stringify([sessionId || "", participants]);
+  syncBookingIdempotencySelection(sessionId, participants);
+  if (bookingIdempotencyKey && bookingIdempotencyFingerprint === fingerprint) return bookingIdempotencyKey;
+
+  try {
+    const stored = JSON.parse(window.sessionStorage.getItem(BOOKING_IDEMPOTENCY_STORAGE_KEY) || "null");
+    if (stored && stored.fingerprint === fingerprint && typeof stored.key === "string" && stored.key) {
+      bookingIdempotencyKey = stored.key;
+      bookingIdempotencyFingerprint = fingerprint;
+      return bookingIdempotencyKey;
+    }
+  } catch (_) {
+    // Le repli en mémoire évite de bloquer la réservation si sessionStorage échoue.
+  }
+
+  bookingIdempotencyKey = createBookingIdempotencyKey();
+  bookingIdempotencyFingerprint = fingerprint;
+  try {
+    window.sessionStorage.setItem(BOOKING_IDEMPOTENCY_STORAGE_KEY, JSON.stringify({ fingerprint, key: bookingIdempotencyKey }));
+  } catch (_) {
+    // La clé reste conservée en mémoire pour les nouvelles tentatives de cette page.
+  }
+  return bookingIdempotencyKey;
+}
+
 function estimateFare(ageGroups) {
   return Object.entries(AGE_GROUP_PRICES).reduce((total, [group, price]) => total + ageGroups[group] * price, 0);
 }
@@ -694,6 +754,7 @@ function updateAgeEstimate() {
   if (!ageGroupInputs.length) return;
   const { ageGroups, valid } = readAgeGroups();
   const total = ageGroupTotal(ageGroups);
+  syncBookingIdempotencySelection(sessionSelect?.value || "", total);
   const amount = estimateFare(ageGroups);
   if (participantsInput) participantsInput.value = String(total);
   if (participantsTotalOutput) participantsTotalOutput.textContent = String(total);
@@ -1125,6 +1186,7 @@ function chooseSession(target) {
         : "Toutes les dates de cette balade sont complètes. Choisissez un autre thème ou contactez Marie-Tiyi.";
     }
   }
+  syncBookingIdempotencySelection(sessionSelect.value, ageGroupTotal(readAgeGroups().ageGroups));
 }
 
 if (messageInput) {
@@ -1260,6 +1322,7 @@ async function submitPublicBooking(values) {
   }
   if (!email) return;
 
+  const idempotencyKey = getBookingIdempotencyKey(session.id, participants);
   if (submitButton) submitButton.disabled = true;
   hideCalendarLink();
   updateFormStatus("Enregistrement de votre réservation…", "pending");
@@ -1273,6 +1336,7 @@ async function submitPublicBooking(values) {
       body: JSON.stringify({
         session_id: session.id, first_name: firstName, last_name: lastName,
         email, phone, message, participants, age_groups: ageGroups,
+        idempotency_key: idempotencyKey,
         website: String(values.get("website") || ""),
       }),
     });
@@ -1293,6 +1357,7 @@ async function submitPublicBooking(values) {
     });
     if (sessionSelect) sessionSelect.value = "";
     ageGroupInputs.forEach((input) => { input.value = "0"; });
+    clearBookingIdempotencyKey();
     ageGroupsTouched = false;
     updateAgeEstimate();
     await loadAvailability();
