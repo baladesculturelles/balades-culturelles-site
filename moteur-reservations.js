@@ -40,7 +40,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "222ba514f0";
+const ENGINE_VERSION = "0649745e38";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -68,7 +68,13 @@ const QUARTIER_WORDS = Object.freeze(["quartier", "village", "faubourg"]);
 
 // Valeurs de secours tant que le programme du site n’a pas été lu.
 const DEFAULT_CAPACITY = 25;
-const DEFAULT_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
+const GROUP_CAPACITY = 20; // groupes de seniors et visites en famille
+const CUSTOM_CAPACITY = 100;
+const SMALL_GROUP_TOPICS = Object.freeze([
+  "Je souhaite organiser une visite pour un groupe de seniors",
+  "Je souhaite organiser une sortie pour une famille",
+]);
+const DEFAULT_PRICES = Object.freeze({ standard: 15, youth: 10, child: 8, underFive: 0 });
 const PRICE_KEYS = Object.freeze(["standard", "youth", "child", "underFive"]);
 
 // Étapes de suivi d’une réservation. Seule « Annulée » libère les places.
@@ -298,7 +304,7 @@ function syncCalendarEvent_(session) {
   const visit = record && openIfAlive_(record.fileId);
   const meeting = visit ? meetingPlace_(visitSheet_(visit)) : "";
   const removed = Boolean(session.removed);
-  const remaining = Math.max(0, getProgram_().capacity - booked);
+  const remaining = Math.max(0, sessionCapacity_(session) - booked);
   const signature = [booked, stats.bookings, session.walk, session.slot, meeting, remaining, removed ? "R" : "", session.date].join("|");
   // Vérification régulière des dates proches : un événement supprimé à la main est recréé.
   const soon = session.date <= isoDaysAhead_(7);
@@ -344,7 +350,7 @@ function syncCalendarEvent_(session) {
 }
 
 function calendarDescription_(session, stats, visit, remaining) {
-  const capacity = getProgram_().capacity;
+  const capacity = sessionCapacity_(session);
   const lines = [
     `${stats.booked} place(s) réservée(s) · ${remaining} restante(s) sur ${capacity}`,
     `Horaire : ${session.slot}`,
@@ -592,8 +598,11 @@ function createCustomRequest_(body) {
   if (!isValidPhone_(phone)) throw new Error("Le numéro de téléphone semble incomplet.");
   if (rawParticipants) {
     const count = Number(rawParticipants);
-    if (!Number.isInteger(count) || count < 1 || count > 100) {
-      throw new Error("Indiquez un nombre de personnes compris entre 1 et 100.");
+    const limit = SMALL_GROUP_TOPICS.indexOf(topic) !== -1 ? GROUP_CAPACITY : CUSTOM_CAPACITY;
+    if (!Number.isInteger(count) || count < 1 || count > limit) {
+      throw new Error(limit === GROUP_CAPACITY
+        ? "Un groupe de seniors ou une visite en famille est limité à 20 personnes."
+        : "Indiquez un nombre de personnes compris entre 1 et 100.");
     }
   }
 
@@ -676,9 +685,9 @@ function getAvailability_() {
         date: session.date,
         walk: session.walk,
         slot: session.slot,
-        capacity: program.capacity,
+        capacity: sessionCapacity_(session),
         booked: booked,
-        remaining: Math.max(0, program.capacity - booked),
+        remaining: Math.max(0, sessionCapacity_(session) - booked),
         ends_at_ms: sessionEndDate_(session).getTime(),
         ended: Date.now() >= sessionEndDate_(session).getTime(),
       };
@@ -747,6 +756,7 @@ function parseProgramme_(data) {
   if (!data || typeof data !== "object" || !Array.isArray(data.sessions)) throw new Error("format inattendu");
   const capacity = Number(data.capacity);
   if (!Number.isInteger(capacity) || capacity < 1 || capacity > 200) throw new Error("nombre de places invalide");
+  const programCapacity = capacity;
   const prices = {};
   PRICE_KEYS.forEach((key) => {
     const value = data.prices ? Number(data.prices[key]) : NaN;
@@ -766,7 +776,10 @@ function parseProgramme_(data) {
     const id = `${date}|${walk}|${slot}`;
     if (seen[id]) return;
     seen[id] = true;
-    sessions.push({ id: id, date: date, walk: walk, slot: slot });
+    // Les séances seniors et familles sont limitées à 20 places, le tout public à 25.
+    const places = Number(item.capacity);
+    const capacity = Number.isInteger(places) && places >= 1 && places <= 200 ? places : programCapacity;
+    sessions.push({ id: id, date: date, walk: walk, slot: slot, capacity: capacity });
   });
   if (!sessions.length) throw new Error("aucune date valide");
   if (sessions.length > 400) throw new Error("trop de dates");
@@ -775,7 +788,11 @@ function parseProgramme_(data) {
 }
 
 function programSignature_(program) {
-  return JSON.stringify([program.capacity, PRICE_KEYS.map((key) => program.prices[key]), program.sessions.map((session) => session.id)]);
+  return JSON.stringify([
+    program.capacity,
+    PRICE_KEYS.map((key) => program.prices[key]),
+    program.sessions.map((session) => [session.id, sessionCapacity_(session)]),
+  ]);
 }
 
 /** Enregistre le programme en morceaux de texte ASCII (limite de 9 Ko par propriété). */
@@ -783,7 +800,7 @@ function storeProgram_(program) {
   const compact = {
     c: program.capacity,
     p: PRICE_KEYS.map((key) => program.prices[key]),
-    s: program.sessions.map((session) => [session.date, session.walk, session.slot]),
+    s: program.sessions.map((session) => [session.date, session.walk, session.slot, sessionCapacity_(session)]),
     t: new Date().toISOString(),
   };
   const text = JSON.stringify(compact).replace(/[\u007f-\uffff]/g, (char) => "\\u" + ("0000" + char.charCodeAt(0).toString(16)).slice(-4));
@@ -811,9 +828,28 @@ function expandProgram_(compact) {
     loaded: true,
     capacity: Number(compact.c) || DEFAULT_CAPACITY,
     prices: prices,
-    sessions: (compact.s || []).map((item) => ({ id: `${item[0]}|${item[1]}|${item[2]}`, date: item[0], walk: item[1], slot: item[2] })),
+    sessions: (compact.s || []).map((item) => ({
+      id: `${item[0]}|${item[1]}|${item[2]}`,
+      date: item[0],
+      walk: item[1],
+      slot: item[2],
+      capacity: Number(item[3]) > 0 ? Number(item[3]) : (Number(compact.c) || DEFAULT_CAPACITY),
+    })),
     fetchedAt: compact.t || "",
   };
+}
+
+/** Places d’une séance : celles publiées, sinon la capacité globale du programme. */
+function sessionCapacity_(session) {
+  const places = Number(session && session.capacity);
+  if (Number.isInteger(places) && places >= 1 && places <= 200) return places;
+  return getProgram_().capacity;
+}
+
+/** Places d’une séance retrouvée par son identifiant « date|balade|horaire ». */
+function sessionCapacityById_(id) {
+  const sessions = getProgram_().sessions.filter((session) => session.id === id);
+  return sessions.length ? sessionCapacity_(sessions[0]) : getProgram_().capacity;
 }
 
 function programAgeSeconds_() {
@@ -861,7 +897,7 @@ function createBooking_(payload) {
     throw new Error("Cette date est passée ou la balade est terminée. Choisissez une prochaine date.");
   }
 
-  const capacity = program.capacity;
+  const capacity = sessionCapacity_(session);
   const participants = Number(payload.participants);
   if (!Number.isInteger(participants) || participants < 1 || participants > capacity) {
     throw new Error(`Le nombre de personnes doit être compris entre 1 et ${capacity}.`);
@@ -1410,7 +1446,7 @@ function writeDashboard_(dashboard) {
   const rows = entries.map((session) => {
     const stats = parseStats_(stored[propertyKey_("stats:", session.id)]);
     const record = parseVisit_(stored[propertyKey_("visit:", session.id)]);
-    const remaining = Math.max(0, program.capacity - stats.booked);
+    const remaining = Math.max(0, sessionCapacity_(session) - stats.booked);
     const past = session.date < today;
     let state = "Places disponibles";
     if (session.removed) state = REMOVED_STATE;
@@ -1622,7 +1658,7 @@ function sendVisitReports_() {
       const stats = countStats_(rows);
       const text = [session.walk, `${longFrenchDate_(session.date).toLowerCase()} — ${session.slot}`,
         sheet ? meetingLine_(sheet) : MEETING_FALLBACK,
-        `Personnes : ${stats.booked}`, `Places restantes : ${Math.max(0, getProgram_().capacity - stats.booked)}`, "", "Participants non annulés", ""];
+        `Personnes : ${stats.booked}`, `Places restantes : ${Math.max(0, sessionCapacity_(session) - stats.booked)}`, "", "Participants non annulés", ""];
       rows.forEach((row) => {
         const firstName = String(row[VISIT_COL.firstName - 1] == null ? "" : row[VISIT_COL.firstName - 1]).trim();
         text.push(`Nom : ${displayName_(firstName, row[1])}`, `E-mail : ${row[2]}`, `Téléphone : ${String(row[3]).replace(/^'/, "")}`,
@@ -1850,7 +1886,6 @@ function runAccounting_() {
   const book = getAccounting_(root);
   setupAccounting_(book);
   const dashboardUrl = getDashboard_(root).getUrl();
-  const capacity = getProgram_().capacity;
   const files = collectVisitFiles_(book);
   const alerts = [];
   const computed = [];
@@ -1870,7 +1905,7 @@ function runAccounting_() {
     }
     const sheet = visitSheet_(visit);
     const entries = readVisitEntries_(sheet);
-    ensureVisitLayout_(sheet, file, dashboardUrl, capacity, entries);
+    ensureVisitLayout_(sheet, file, dashboardUrl, sessionCapacityById_(`${file.date}|${file.walk}|${file.slot}`), entries);
     applyPaidShortcut_(sheet, entries, file);
     entries.forEach((entry) => {
       const values = entry.values;

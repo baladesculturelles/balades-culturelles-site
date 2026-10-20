@@ -3,7 +3,7 @@
   "capacity": 25,
   "prices": {
     "standard": 15,
-    "youth": 12,
+    "youth": 10,
     "child": 8,
     "underFive": 0
   },
@@ -12,151 +12,521 @@
       "id": "2026-09-12|Le cimetière du Montparnasse|10 h 30–12 h",
       "date": "2026-09-12",
       "walk": "Le cimetière du Montparnasse",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2026-09-13|Le cimetière du Montparnasse|10 h 30–12 h",
       "date": "2026-09-13",
       "walk": "Le cimetière du Montparnasse",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2026-09-23|Le square du Maréchal Leclerc|10 h 30–11 h 45",
+      "date": "2026-09-23",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-09-24|Le cimetière du Montparnasse|10 h 30–11 h 45",
+      "date": "2026-09-24",
+      "walk": "Le cimetière du Montparnasse",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
+    },
+    {
+      "id": "2026-09-30|Le parc de Voyer d’Argenson|10 h 30–11 h 45",
+      "date": "2026-09-30",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2026-10-03|Art nouveau à Nation|10 h 30–12 h",
       "date": "2026-10-03",
       "walk": "Art nouveau à Nation",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2026-10-04|Art nouveau à Nation|10 h 30–12 h",
       "date": "2026-10-04",
       "walk": "Art nouveau à Nation",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2026-10-07|Le square du Maréchal Joffre|10 h 30–11 h 45",
+      "date": "2026-10-07",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-10-14|Le square Sylvain|10 h 30–11 h 45",
+      "date": "2026-10-14",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-10-15|Sur les pas d’Hector Guimard|10 h 30–11 h 45",
+      "date": "2026-10-15",
+      "walk": "Sur les pas d’Hector Guimard",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
+    },
+    {
+      "id": "2026-11-04|Le square Maréchal de Lattre de Tassigny|10 h 30–11 h 45",
+      "date": "2026-11-04",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2026-11-14|Le Paris de Molière|10 h 30–12 h",
       "date": "2026-11-14",
       "walk": "Le Paris de Molière",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2026-11-15|Le Paris de Molière|10 h 30–12 h",
       "date": "2026-11-15",
       "walk": "Le Paris de Molière",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2026-11-18|Le parc Robinson|10 h 30–11 h 45",
+      "date": "2026-11-18",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-11-24|La mairie d’Asnières|10 h 30–11 h 45",
+      "date": "2026-11-24",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-11-26|Le Paris de Molière|10 h 30–11 h 45",
+      "date": "2026-11-26",
+      "walk": "Le Paris de Molière",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
     },
     {
       "id": "2026-11-28|Les grands magasins|10 h 30–12 h",
       "date": "2026-11-28",
       "walk": "Les grands magasins",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2026-11-29|Les grands magasins|10 h 30–12 h",
       "date": "2026-11-29",
       "walk": "Les grands magasins",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2026-12-02|Le cimetière ancien, un lieu de mémoire|10 h 30–11 h 45",
+      "date": "2026-12-02",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2026-12-09|Le cimetière des chiens, un lieu pour nos amis les bêtes|10 h 30–11 h 45",
+      "date": "2026-12-09",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2026-12-12|Les passages couverts|10 h 30–12 h",
       "date": "2026-12-12",
       "walk": "Les passages couverts",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-01-06|Le square du Maréchal Leclerc|10 h 30–11 h 45",
+      "date": "2027-01-06",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-01-13|Le parc de Voyer d’Argenson|10 h 30–11 h 45",
+      "date": "2027-01-13",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-01-20|Le square du Maréchal Joffre|10 h 30–11 h 45",
+      "date": "2027-01-20",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2027-01-23|Le quartier Montsouris|10 h 30–12 h",
       "date": "2027-01-23",
       "walk": "Le quartier Montsouris",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-01-24|Le quartier Montsouris|10 h 30–12 h",
       "date": "2027-01-24",
       "walk": "Le quartier Montsouris",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-01-27|Le square Sylvain|10 h 30–11 h 45",
+      "date": "2027-01-27",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-01-28|Les passages couverts|10 h 30–11 h 45",
+      "date": "2027-01-28",
+      "walk": "Les passages couverts",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
+    },
+    {
+      "id": "2027-02-03|Le square Maréchal de Lattre de Tassigny|10 h 30–11 h 45",
+      "date": "2027-02-03",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-02-24|Le parc Robinson|10 h 30–11 h 45",
+      "date": "2027-02-24",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-02-25|Le quartier et l’église Saint-Séverin|10 h 30–11 h 45",
+      "date": "2027-02-25",
+      "walk": "Le quartier et l’église Saint-Séverin",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
     },
     {
       "id": "2027-02-27|Le quartier chinois|10 h 30–12 h",
       "date": "2027-02-27",
       "walk": "Le quartier chinois",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-02-28|Le quartier chinois|10 h 30–12 h",
       "date": "2027-02-28",
       "walk": "Le quartier chinois",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-03-03|La mairie d’Asnières|10 h 30–11 h 45",
+      "date": "2027-03-03",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-03-10|Le cimetière ancien, un lieu de mémoire|10 h 30–11 h 45",
+      "date": "2027-03-10",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-03-17|Le cimetière des chiens, un lieu pour nos amis les bêtes|10 h 30–11 h 45",
+      "date": "2027-03-17",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-03-18|Le parc Monceau et ses hôtels particuliers|10 h 30–11 h 45",
+      "date": "2027-03-18",
+      "walk": "Le parc Monceau et ses hôtels particuliers",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
     },
     {
       "id": "2027-03-20|Le cimetière du Père-Lachaise|10 h 30–12 h",
       "date": "2027-03-20",
       "walk": "Le cimetière du Père-Lachaise",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-03-21|Le cimetière du Père-Lachaise|10 h 30–12 h",
       "date": "2027-03-21",
       "walk": "Le cimetière du Père-Lachaise",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-03-24|Le square du Maréchal Leclerc|10 h 30–11 h 45",
+      "date": "2027-03-24",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-03-31|Le parc de Voyer d’Argenson|10 h 30–11 h 45",
+      "date": "2027-03-31",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-04-21|Le square du Maréchal Joffre|10 h 30–11 h 45",
+      "date": "2027-04-21",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2027-04-24|Le Paris haussmannien|10 h 30–12 h",
       "date": "2027-04-24",
       "walk": "Le Paris haussmannien",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-04-25|Le Paris haussmannien|10 h 30–12 h",
       "date": "2027-04-25",
       "walk": "Le Paris haussmannien",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-04-28|Le square Sylvain|10 h 30–11 h 45",
+      "date": "2027-04-28",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-04-29|La butte aux Cailles|10 h 30–11 h 45",
+      "date": "2027-04-29",
+      "walk": "La butte aux Cailles",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
+    },
+    {
+      "id": "2027-05-05|Le square Maréchal de Lattre de Tassigny|10 h 30–11 h 45",
+      "date": "2027-05-05",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-05-12|Le parc Robinson|10 h 30–11 h 45",
+      "date": "2027-05-12",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-05-19|La mairie d’Asnières|10 h 30–11 h 45",
+      "date": "2027-05-19",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2027-05-22|La Défense et ses œuvres contemporaines|10 h 30–12 h",
       "date": "2027-05-22",
       "walk": "La Défense et ses œuvres contemporaines",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-05-23|La Défense et ses œuvres contemporaines|10 h 30–12 h",
       "date": "2027-05-23",
       "walk": "La Défense et ses œuvres contemporaines",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-05-26|Le cimetière ancien, un lieu de mémoire|10 h 30–11 h 45",
+      "date": "2027-05-26",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-05-27|Le quartier de la Nouvelle Athènes|10 h 30–11 h 45",
+      "date": "2027-05-27",
+      "walk": "Le quartier de la Nouvelle Athènes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
+    },
+    {
+      "id": "2027-06-02|Le cimetière des chiens, un lieu pour nos amis les bêtes|10 h 30–11 h 45",
+      "date": "2027-06-02",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-06-09|Le square du Maréchal Leclerc|10 h 30–11 h 45",
+      "date": "2027-06-09",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2027-06-12|L’Inde à Paris|10 h 30–12 h",
       "date": "2027-06-12",
       "walk": "L’Inde à Paris",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-06-13|L’Inde à Paris|10 h 30–12 h",
       "date": "2027-06-13",
       "walk": "L’Inde à Paris",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-06-16|Le parc de Voyer d’Argenson|10 h 30–11 h 45",
+      "date": "2027-06-16",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-06-23|Le square du Maréchal Joffre|10 h 30–11 h 45",
+      "date": "2027-06-23",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
+    },
+    {
+      "id": "2027-06-24|La muraille de Philippe Auguste|10 h 30–11 h 45",
+      "date": "2027-06-24",
+      "walk": "La muraille de Philippe Auguste",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors",
+      "capacity": 20
     },
     {
       "id": "2027-06-26|Champs de Mars et Tour Eiffel|10 h 30–12 h",
       "date": "2027-06-26",
       "walk": "Champs de Mars et Tour Eiffel",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-06-27|Champs de Mars et Tour Eiffel|10 h 30–12 h",
       "date": "2027-06-27",
       "walk": "Champs de Mars et Tour Eiffel",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
+    },
+    {
+      "id": "2027-06-30|Le square Sylvain|10 h 30–11 h 45",
+      "date": "2027-06-30",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles",
+      "capacity": 20
     },
     {
       "id": "2027-07-10|Sur les traces de l’enceinte de Philippe Auguste|10 h 30–12 h",
       "date": "2027-07-10",
       "walk": "Sur les traces de l’enceinte de Philippe Auguste",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     },
     {
       "id": "2027-07-11|Sur les traces de l’enceinte de Philippe Auguste|10 h 30–12 h",
       "date": "2027-07-11",
       "walk": "Sur les traces de l’enceinte de Philippe Auguste",
-      "slot": "10 h 30–12 h"
+      "slot": "10 h 30–12 h",
+      "kind": "public",
+      "capacity": 25
     }
   ]
 }

@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f3efe5">
+    <meta name="description" content="Tout public, seniors, familles, groupes et scolaires : découvrez les balades culturelles à Paris et en Île-de-France.">
+    <meta name="robots" content="noindex, nofollow">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Les balades culturelles — Balades Culturelles">
+    <meta property="og:description" content="Tout public, seniors, familles, groupes et scolaires : découvrez les balades culturelles à Paris et en Île-de-France.">
+    <meta property="og:url" content="https://baladesculturelles.github.io/balades-culturelles-site/balades.html">
+    <meta property="og:image" content="https://baladesculturelles.github.io/balades-culturelles-site/assets/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt" content="Balades Culturelles — une rue de Paris bordée de façades anciennes, avec le titre du site.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Les balades culturelles — Balades Culturelles">
+    <meta name="twitter:description" content="Tout public, seniors, familles, groupes et scolaires : découvrez les balades culturelles à Paris et en Île-de-France.">
+    <meta name="twitter:image" content="https://baladesculturelles.github.io/balades-culturelles-site/assets/og-image.jpg">
+    <meta name="twitter:image:alt" content="Balades Culturelles — une rue de Paris bordée de façades anciennes, avec le titre du site.">
+    <title>Les balades culturelles — Balades Culturelles</title>
+    <link rel="icon" href="assets/responsive/logo-96.png" sizes="96x96" type="image/png">
+    <link rel="apple-touch-icon" href="assets/responsive/logo-96.png">
+    <!-- Le formulaire envoie sa demande à Google Apps Script : ouvrir la connexion
+         dès le chargement évite une résolution DNS et une poignée de main TLS
+         au moment du clic sur « Envoyer ». Sans effet en aperçu local. -->
+    <link rel="preconnect" href="https://script.google.com" crossorigin>
+    <link rel="dns-prefetch" href="https://script.googleusercontent.com">
+    <link rel="preload" as="image" imagesrcset="assets/responsive/hero-guide-480.webp 480w, assets/responsive/hero-guide-800.webp 800w, assets/responsive/hero-guide-1080.webp 1080w" imagesizes="(max-width: 760px) 94vw, (max-width: 980px) 52vw, 620px" type="image/webp">
+    <link rel="stylesheet" href="styles.css?v=ameliorations-20261021-32">
+    <script src="script.js?v=ameliorations-20261021-32" defer></script>
+    <noscript><style>
+      .legal-dialog { position: static; display: block; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
+      .legal-dialog-frame { max-height: none; }
+      .legal-dialog-close { display: none; }
+      .legal-dialog-body { grid-template-columns: 1fr; }
+      .legal-dialog-rail { flex-direction: row; }
+      .legal-dialog-content { overflow: visible; }
+    </style></noscript>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Aller au contenu</a>
+
+<header class="site-header" data-header>
+      <div class="header-inner section-shell">
+        <a class="brand" href="index.html">
+          <span class="brand-logo" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
+          <span class="brand-lockup"><strong>Balades culturelles</strong><small>À Paris et en Île-de-France</small></span>
+        </a>
+        <button class="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="primary-navigation">
+          <span></span><span></span>
+        </button>
+        <nav class="primary-navigation" id="primary-navigation" aria-label="Navigation principale">
+          <a href="index.html">Accueil</a>
+          <div class="nav-item-dropdown">
+            <a href="balades.html" class="nav-dropdown-toggle">Balades culturelles <span class="nav-caret" aria-hidden="true">▾</span></a>
+            <div class="nav-subnav" aria-label="Sous-menu Balades culturelles">
+              <a href="balades.html#programme">Tout public</a>
+              <a href="balades.html#seniors">Seniors</a>
+              <a href="balades.html#familles">Familles</a>
+              <a href="balades.html#groupes">Groupes &amp; sur mesure</a>
+            </div>
+          </div>
+          <a href="infos-pratiques.html">Infos pratiques</a>
+          <a class="nav-cta" href="contact.html">Me contacter <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="page-intro section-shell" aria-labelledby="page-title">
+        <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> Les balades culturelles</p>
+        <h1 id="page-title">Des balades pour découvrir <em>Paris.</em></h1>
+        <p class="page-intro-lead">Des rives de la Seine aux rues de Montmartre, des façades remarquables aux traces du Paris antique&nbsp;: choisissez votre formule, puis réservez une date programmée ou imaginons ensemble votre parcours.</p>
+      </section>
+      <aside class="next-walk" id="prochaine-balade" aria-labelledby="next-walk-title" hidden>
+        <div class="next-walk-inner section-shell">
+          <div class="next-walk-preview">
+            <img class="next-walk-thumb" data-next-walk-img src="assets/walk-moliere.jpg" alt="" width="56" height="56" loading="lazy">
+            <p class="next-walk-main">
+              <strong id="next-walk-title">La prochaine balade</strong>
+              <span class="next-walk-meta"><span data-next-walk-date></span> · <span data-next-walk-places>Places en cours de chargement…</span></span>
+            </p>
+          </div>
+          <a class="next-walk-cta" href="contact.html" data-next-walk-cta data-interest="Je souhaite réserver une balade publique">Réserver cette date <span aria-hidden="true">↗</span><span class="visually-hidden" data-next-walk-details></span></a>
+        </div>
+      </aside>
+
+
+      <section class="program section-space" id="programme" aria-labelledby="program-title">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dates programmées</p>
+              <h2 id="program-title">Balades des week-ends · <em>Tout public.</em></h2>
+            </div>
+            <p class="section-intro">Certains samedis et dimanches, de 10 h 30 à 12 h, des balades ouvertes à tous pour explorer l’histoire et les secrets de Paris et de l’Île-de-France.</p>
+          </div>
+
+          <div class="program-overview">
+            <div class="program-overview-item"><span>Les jours</span><strong>Samedi &amp; dimanche</strong></div>
+            <div class="program-overview-item"><span>Horaires · 1 h 30</span><strong>10 h 30 – 12 h</strong></div>
+            <p>Les places restantes sont indiquées pour chaque date et actualisées régulièrement.</p>
+          </div>
+
+          <div class="inspiration-head">
+            <p class="inspiration-label">Les prochaines balades</p>
+            <div class="inspiration-nav">
+              <button class="inspiration-nav-button" type="button" data-inspiration-prev aria-label="Voir les balades précédentes" disabled>←</button>
+              <button class="inspiration-nav-button" type="button" data-inspiration-next aria-label="Voir les balades suivantes">→</button>
+            </div>
+          </div>
+          <ul class="inspiration-track" id="inspiration-track" aria-label="Prochaines balades publiques, dans l’ordre des dates" tabindex="0"></ul>
+          <p class="inspiration-hint">Faites glisser vers la droite ou utilisez les flèches pour découvrir les autres dates.</p>
+
+          <div class="program-tools">
+            <label class="program-search">
+              <span class="program-search-label">Trouver une balade</span>
+              <span class="program-search-control">
+                <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><circle cx="10.8" cy="10.8" r="6.6"></circle><path d="m16 16 4.2 4.2"></path></svg>
+                <input id="program-search" type="search" placeholder="Ex. Molière, Montparnasse…" autocomplete="off" aria-describedby="program-result-count">
+              </span>
+            </label>
+            <div class="program-filter-group" role="group" aria-label="Filtrer les balades">
+              <button class="program-filter is-active" type="button" data-program-filter="all" aria-pressed="true">Toutes</button>
+              <button class="program-filter" type="button" data-program-filter="available" aria-pressed="false" disabled>Places disponibles</button>
+            </div>
+            <p class="program-result-count" id="program-result-count" role="status" aria-live="polite">Chargement du programme…</p>
+          </div>
+
+          <div class="program-grid" aria-label="Dates des balades publiques">
+            <article class="program-card" data-program-card data-walk="Le cimetière du Montparnasse" data-slot="10 h 30–12 h" data-image="assets/walk-montparnasse.jpg" data-image-alt="Allées arborées et sculptures du cimetière du Montparnasse à Paris" data-summary="Flânez à l’ombre des tilleuls parmi les sépultures d’artistes, d’écrivains et de penseurs qui ont fait vibrer Montparnasse : un musée de sculpture à ciel ouvert où chaque tombe raconte un destin hors du commun.">
+              <div class="program-card-top"><span class="program-number">01</span><span class="program-kind">Histoire · mémoire</span></div>
+              <h3>Le cimetière du Montparnasse</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le cimetière du Montparnasse">
+                <a class="program-date" data-full-date="12 septembre 2026" href="contact.html" data-program-date="2026-09-12" data-date="2026-09-12" data-interest="Je souhaite réserver une balade publique" data-walk="Le cimetière du Montparnasse" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-09-12"><span class="program-date-day">12</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">sept.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="13 septembre 2026" href="contact.html" data-program-date="2026-09-13" data-date="2026-09-13" data-interest="Je souhaite réserver une balade publique" data-walk="Le cimetière du Montparnasse" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-09-13"><span class="program-date-day">13</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">sept.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Art nouveau à Nation" data-slot="10 h 30–12 h" data-image="assets/walk-nation-art-nouveau.jpg" data-image-alt="Façade Art nouveau aux lignes courbes et ferronneries florales près de Nation" data-summary="Levez les yeux sur les courbes végétales, les céramiques émaillées et les ferronneries flamboyantes de la Belle Époque : une balade pleine de surprises architecturales autour de la place de la Nation.">
+              <div class="program-card-top"><span class="program-number">02</span><span class="program-kind">Architecture · art</span></div>
+              <h3>Art nouveau à Nation</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Art nouveau à Nation">
+                <a class="program-date" data-full-date="3 octobre 2026" href="contact.html" data-program-date="2026-10-03" data-date="2026-10-03" data-interest="Je souhaite réserver une balade publique" data-walk="Art nouveau à Nation" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-10-03"><span class="program-date-day">3</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">oct.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="4 octobre 2026" href="contact.html" data-program-date="2026-10-04" data-date="2026-10-04" data-interest="Je souhaite réserver une balade publique" data-walk="Art nouveau à Nation" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-10-04"><span class="program-date-day">4</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">oct.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Le Paris de Molière" data-slot="10 h 30–12 h" data-image="assets/walk-moliere.jpg" data-image-alt="Buste et plaque commémorative de Jean-Baptiste Poquelin dit Molière à Paris" data-summary="Partez sur les traces de Molière et découvrez l’homme derrière le dramaturge : une histoire faite de passions, d’ambition, de scandales et de succès au cœur du Paris historique.">
+              <div class="program-card-top"><span class="program-number">03</span><span class="program-kind">Histoire · théâtre</span></div>
+              <h3>Le Paris de Molière</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le Paris de Molière">
+                <a class="program-date" data-full-date="14 novembre 2026" href="contact.html" data-program-date="2026-11-14" data-date="2026-11-14" data-interest="Je souhaite réserver une balade publique" data-walk="Le Paris de Molière" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-11-14"><span class="program-date-day">14</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">nov.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="15 novembre 2026" href="contact.html" data-program-date="2026-11-15" data-date="2026-11-15" data-interest="Je souhaite réserver une balade publique" data-walk="Le Paris de Molière" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-11-15"><span class="program-date-day">15</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">nov.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Les grands magasins" data-slot="10 h 30–12 h" data-image="assets/walk-grands-magasins.jpg" data-image-alt="Coupole Art nouveau en vitrail et balcons dorés des Galeries Lafayette à Paris" data-summary="Et si nous remontions le temps pour découvrir comment Paris a inventé l’art du shopping ? Partez à la découverte de deux monuments incontournables du boulevard Haussmann : le Printemps et les Galeries Lafayette !">
+              <div class="program-card-top"><span class="program-number">04</span><span class="program-kind">Architecture · patrimoine</span></div>
+              <h3>Les grands magasins</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Les grands magasins">
+                <a class="program-date" data-full-date="28 novembre 2026" href="contact.html" data-program-date="2026-11-28" data-date="2026-11-28" data-interest="Je souhaite réserver une balade publique" data-walk="Les grands magasins" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-11-28"><span class="program-date-day">28</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">nov.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="29 novembre 2026" href="contact.html" data-program-date="2026-11-29" data-date="2026-11-29" data-interest="Je souhaite réserver une balade publique" data-walk="Les grands magasins" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-11-29"><span class="program-date-day">29</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">nov.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Les passages couverts" data-slot="10 h 30–12 h" data-image="assets/walk-passages-couverts.jpg" data-image-alt="Intérieur d’un passage couvert parisien, sous verrière, avec ses boutiques anciennes et ses réverbères" data-summary="Faufilez-vous à l’abri des verrières du XIXe siècle, entre mosaïques d’époque, librairies anciennes et galeries secrètes : une promenade hors du temps au cœur du Paris des flâneurs.">
+              <div class="program-card-top"><span class="program-number">05</span><span class="program-kind">Architecture · Paris</span></div>
+              <h3>Les passages couverts</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Les passages couverts">
+                <a class="program-date" data-full-date="12 décembre 2026" href="contact.html" data-program-date="2026-12-12" data-date="2026-12-12" data-interest="Je souhaite réserver une balade publique" data-walk="Les passages couverts" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2026-12-12"><span class="program-date-day">12</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">déc.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Le quartier Montsouris" data-slot="10 h 30–12 h" data-image="assets/walk-montsouris.jpg" data-image-alt="Maisons et ateliers d’artistes dans une ruelle fleurie du quartier Montsouris" data-summary="Des allées romantiques du parc aux ruelles pavées bordées d’ateliers d’artistes des années folles, explorez un village secret et verdoyant où l’architecture moderne côtoie la poésie.">
+              <div class="program-card-top"><span class="program-number">06</span><span class="program-kind">Quartier · nature</span></div>
+              <h3>Le quartier Montsouris</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le quartier Montsouris">
+                <a class="program-date" data-full-date="23 janvier 2027" href="contact.html" data-program-date="2027-01-23" data-date="2027-01-23" data-interest="Je souhaite réserver une balade publique" data-walk="Le quartier Montsouris" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-01-23"><span class="program-date-day">23</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">janv.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="24 janvier 2027" href="contact.html" data-program-date="2027-01-24" data-date="2027-01-24" data-interest="Je souhaite réserver une balade publique" data-walk="Le quartier Montsouris" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-01-24"><span class="program-date-day">24</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">janv.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Le quartier chinois" data-slot="10 h 30–12 h" data-image="assets/walk-quartier-chinois.jpg" data-image-alt="Lanternes rouges et vie commerçante du quartier chinois du 13e arrondissement" data-summary="Derrière l’audace des tours du 13e arrondissement, poussez la porte de temples cachés, d’échoppes parfumées et d’histoires méconnues qui font toute la richesse culturelle de ce quartier fascinant.">
+              <div class="program-card-top"><span class="program-number">07</span><span class="program-kind">Culture · quartiers</span></div>
+              <h3>Le quartier chinois</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le quartier chinois">
+                <a class="program-date" data-full-date="27 février 2027" href="contact.html" data-program-date="2027-02-27" data-date="2027-02-27" data-interest="Je souhaite réserver une balade publique" data-walk="Le quartier chinois" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-02-27"><span class="program-date-day">27</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">févr.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="28 février 2027" href="contact.html" data-program-date="2027-02-28" data-date="2027-02-28" data-interest="Je souhaite réserver une balade publique" data-walk="Le quartier chinois" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-02-28"><span class="program-date-day">28</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">févr.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Le cimetière du Père-Lachaise" data-slot="10 h 30–12 h" data-image="assets/walk-pere-lachaise.jpg" data-image-alt="Chemin pavé et monuments romantiques sous les arbres du Père-Lachaise" data-summary="Parcourez les chemins pavés du plus célèbre jardin de mémoire parisien : entre chefs-d’œuvre funéraires, légendes romantiques et destins illustres, l’Histoire se dévoile au détour de chaque allée.">
+              <div class="program-card-top"><span class="program-number">08</span><span class="program-kind">Lieu de mémoire</span></div>
+              <h3>Le cimetière du Père-Lachaise</h3>
+              <p class="program-card-note">Un lieu de devoir et de mémoire.</p>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le cimetière du Père-Lachaise">
+                <a class="program-date" data-full-date="20 mars 2027" href="contact.html" data-program-date="2027-03-20" data-date="2027-03-20" data-interest="Je souhaite réserver une balade publique" data-walk="Le cimetière du Père-Lachaise" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-03-20"><span class="program-date-day">20</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">mars</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="21 mars 2027" href="contact.html" data-program-date="2027-03-21" data-date="2027-03-21" data-interest="Je souhaite réserver une balade publique" data-walk="Le cimetière du Père-Lachaise" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-03-21"><span class="program-date-day">21</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">mars</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Le Paris haussmannien" data-slot="10 h 30–12 h" data-image="assets/walk-haussmann.jpg" data-image-alt="Perspective d’un grand boulevard haussmannien aux façades de pierre de taille" data-summary="Percées monumentales, façades de pierre sculptée et balcons filants : découvrez les secrets de la grande métamorphose du Second Empire qui a donné à Paris son visage le plus emblématique.">
+              <div class="program-card-top"><span class="program-number">09</span><span class="program-kind">Architecture · urbanisme</span></div>
+              <h3>Le Paris haussmannien</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Le Paris haussmannien">
+                <a class="program-date" data-full-date="24 avril 2027" href="contact.html" data-program-date="2027-04-24" data-date="2027-04-24" data-interest="Je souhaite réserver une balade publique" data-walk="Le Paris haussmannien" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-04-24"><span class="program-date-day">24</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">avr.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="25 avril 2027" href="contact.html" data-program-date="2027-04-25" data-date="2027-04-25" data-interest="Je souhaite réserver une balade publique" data-walk="Le Paris haussmannien" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-04-25"><span class="program-date-day">25</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">avr.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="La Défense et ses œuvres contemporaines" data-slot="10 h 30–12 h" data-image="assets/walk-la-defense.jpg" data-image-alt="Sculpture monumentale colorée et perspectives contemporaines à La Défense" data-summary="De Calder à Miró en passant par César, partez à la chasse aux œuvres monumentales nichées au pied des gratte-ciel et découvrez le plus grand musée d’art contemporain en plein air de France.">
+              <div class="program-card-top"><span class="program-number">10</span><span class="program-kind">Art · architecture</span></div>
+              <h3>La Défense et ses œuvres contemporaines</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour La Défense et ses œuvres contemporaines">
+                <a class="program-date" data-full-date="22 mai 2027" href="contact.html" data-program-date="2027-05-22" data-date="2027-05-22" data-interest="Je souhaite réserver une balade publique" data-walk="La Défense et ses œuvres contemporaines" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-05-22"><span class="program-date-day">22</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">mai</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="23 mai 2027" href="contact.html" data-program-date="2027-05-23" data-date="2027-05-23" data-interest="Je souhaite réserver une balade publique" data-walk="La Défense et ses œuvres contemporaines" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-05-23"><span class="program-date-day">23</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">mai</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="L’Inde à Paris" data-slot="10 h 30–12 h" data-image="assets/walk-inde-paris.jpg" data-image-alt="Échoppes colorées et façades du quartier indien à Paris" data-summary="Laissez-vous transporter par les couleurs des saris, les parfums d’épices et les récits d’une communauté vibrante : une escapade dépaysante au cœur de Paris, entre traditions, temples et petites histoires.">
+              <div class="program-card-top"><span class="program-number">11</span><span class="program-kind">Culture · rencontres</span></div>
+              <h3>L’Inde à Paris</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour L’Inde à Paris">
+                <a class="program-date" data-full-date="12 juin 2027" href="contact.html" data-program-date="2027-06-12" data-date="2027-06-12" data-interest="Je souhaite réserver une balade publique" data-walk="L’Inde à Paris" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-06-12"><span class="program-date-day">12</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">juin</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="13 juin 2027" href="contact.html" data-program-date="2027-06-13" data-date="2027-06-13" data-interest="Je souhaite réserver une balade publique" data-walk="L’Inde à Paris" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-06-13"><span class="program-date-day">13</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">juin</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Champs de Mars et Tour Eiffel" data-slot="10 h 30–12 h" data-image="assets/walk-tour-eiffel.jpg" data-image-alt="La Tour Eiffel vue depuis les pelouses et les arbres du Champ-de-Mars" data-summary="Revivez la folle aventure des Expositions universelles et les prouesses de Gustave Eiffel : anecdotes savoureuses, défis techniques et regards neufs sur le monument le plus célèbre du monde.">
+              <div class="program-card-top"><span class="program-number">12</span><span class="program-kind">Paris · patrimoine</span></div>
+              <h3>Champs de Mars et Tour Eiffel</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Champs de Mars et Tour Eiffel">
+                <a class="program-date" data-full-date="26 juin 2027" href="contact.html" data-program-date="2027-06-26" data-date="2027-06-26" data-interest="Je souhaite réserver une balade publique" data-walk="Champs de Mars et Tour Eiffel" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-06-26"><span class="program-date-day">26</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">juin</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="27 juin 2027" href="contact.html" data-program-date="2027-06-27" data-date="2027-06-27" data-interest="Je souhaite réserver une balade publique" data-walk="Champs de Mars et Tour Eiffel" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-06-27"><span class="program-date-day">27</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">juin</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="program-card" data-program-card data-walk="Sur les traces de l’enceinte de Philippe Auguste" data-slot="10 h 30–12 h" data-image="assets/walk-philippe-auguste.jpg" data-image-alt="Vestige en pierre d’une tour médiévale de l’enceinte de Philippe Auguste à Paris" data-summary="Menez l’enquête au cœur de Paris pour débusquer tours crénelées et pans de muraille du XIIe siècle cachés entre cours et jardins : un véritable jeu de piste médiéval à ciel ouvert.">
+              <div class="program-card-top"><span class="program-number">13</span><span class="program-kind">Paris · histoire</span></div>
+              <h3>Sur les traces de l’enceinte de Philippe Auguste</h3>
+              <div class="program-dates" role="group" aria-label="Choisir une date pour Sur les traces de l’enceinte de Philippe Auguste">
+                <a class="program-date" data-full-date="10 juillet 2027" href="contact.html" data-program-date="2027-07-10" data-date="2027-07-10" data-interest="Je souhaite réserver une balade publique" data-walk="Sur les traces de l’enceinte de Philippe Auguste" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-07-10"><span class="program-date-day">10</span><span class="program-date-meta"><span class="program-date-weekday">sam</span><span class="program-date-month">juil.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+                <a class="program-date" data-full-date="11 juillet 2027" href="contact.html" data-program-date="2027-07-11" data-date="2027-07-11" data-interest="Je souhaite réserver une balade publique" data-walk="Sur les traces de l’enceinte de Philippe Auguste" data-slot="10 h 30–12 h"><time class="program-date-calendar" datetime="2027-07-11"><span class="program-date-day">11</span><span class="program-date-meta"><span class="program-date-weekday">dim</span><span class="program-date-month">juil.</span></span></time><span class="availability-count" data-availability-label>Chargement…</span><span class="visually-hidden" data-availability-details>Réserver cette balade</span></a>
+              </div>
+              <a class="program-cta" href="contact.html" data-interest="Je souhaite réserver une balade publique">Réserver une place <span aria-hidden="true">↗</span></a>
+            </article>
+          </div>
+          <p class="program-empty" data-program-empty hidden>Le programme 2026–2027 est terminé. Écrivez à Marie-Tiyi pour connaître les prochaines dates ou organiser une balade à la demande.</p>
+          <p class="program-filter-empty" id="program-filter-empty" role="status" aria-live="polite" hidden>Aucune balade ne correspond à ces critères. <button type="button" id="clear-program-filters">Effacer les filtres</button></p>
+        </div>
+      </section>
+
+
+      <!-- Programme des balades seniors et familles : séances réservables, lues par le serveur. -->
+      <script type="application/json" id="programme-extra">
+{
+  "sessions": [
+    {
+      "date": "2026-09-23",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-09-24",
+      "walk": "Le cimetière du Montparnasse",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2026-09-30",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-10-07",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-10-14",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-10-15",
+      "walk": "Sur les pas d’Hector Guimard",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2026-11-04",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-11-18",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-11-24",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-11-26",
+      "walk": "Le Paris de Molière",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2026-12-02",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2026-12-09",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-01-06",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-01-13",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-01-20",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-01-27",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-01-28",
+      "walk": "Les passages couverts",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-02-03",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-02-24",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-02-25",
+      "walk": "Le quartier et l’église Saint-Séverin",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-03-03",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-03-10",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-03-17",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-03-18",
+      "walk": "Le parc Monceau et ses hôtels particuliers",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-03-24",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-03-31",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-04-21",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-04-28",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-04-29",
+      "walk": "La butte aux Cailles",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-05-05",
+      "walk": "Le square Maréchal de Lattre de Tassigny",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-05-12",
+      "walk": "Le parc Robinson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-05-19",
+      "walk": "La mairie d’Asnières",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-05-26",
+      "walk": "Le cimetière ancien, un lieu de mémoire",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-05-27",
+      "walk": "Le quartier de la Nouvelle Athènes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-06-02",
+      "walk": "Le cimetière des chiens, un lieu pour nos amis les bêtes",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-06-09",
+      "walk": "Le square du Maréchal Leclerc",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-06-16",
+      "walk": "Le parc de Voyer d’Argenson",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-06-23",
+      "walk": "Le square du Maréchal Joffre",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    },
+    {
+      "date": "2027-06-24",
+      "walk": "La muraille de Philippe Auguste",
+      "slot": "10 h 30–11 h 45",
+      "kind": "seniors"
+    },
+    {
+      "date": "2027-06-30",
+      "walk": "Le square Sylvain",
+      "slot": "10 h 30–11 h 45",
+      "kind": "familles"
+    }
+  ]
+}
+      </script>
+
+      <section class="category-section section-space" id="seniors" aria-labelledby="seniors-title">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dates programmées</p>
+              <h2 id="seniors-title">Balades des jeudis · <em>Seniors.</em></h2>
+            </div>
+            <p class="section-intro">Certains jeudis, des balades de 1 h 15 au rythme paisible, avec des étapes de repos, un terrain choisi avec soin et une ambiance chaleureuse.</p>
+          </div>
+          <div class="program-overview">
+            <div class="program-overview-item"><span>Les jours</span><strong>Jeudi</strong></div>
+            <div class="program-overview-item"><span>Horaires · 1 h 15</span><strong>10 h 30 – 11 h 45</strong></div>
+            <p>Les places restantes sont indiquées pour chaque date et actualisées régulièrement.</p>
+          </div>
+          <div class="inspiration-head">
+            <p class="inspiration-label">Les prochaines balades seniors</p>
+            <div class="inspiration-nav">
+              <button class="inspiration-nav-button" type="button" data-seniors-prev aria-label="Voir les balades seniors précédentes" disabled>←</button>
+              <button class="inspiration-nav-button" type="button" data-seniors-next aria-label="Voir les balades seniors suivantes">→</button>
+            </div>
+          </div>
+          <ul class="inspiration-track" id="seniors-track" aria-label="Balades seniors programmées" tabindex="0">
+            <li class="next-card senior-card">
+              <div class="next-card-body">
+                <span class="next-card-kind">Balade seniors · 1 h 15</span>
+                <h3 class="next-card-title">Chargement du programme…</h3>
+                <p class="next-card-summary">Les dates des balades seniors s’affichent ici.</p>
+              </div>
+            </li>
+          </ul>
+          <p class="inspiration-hint">Faites glisser vers la droite ou utilisez les flèches pour découvrir les autres dates.</p>
+        </div>
+      </section>
+
+
+      <section class="category-section section-space" id="familles" aria-labelledby="familles-title">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dates programmées</p>
+              <h2 id="familles-title">Balades des mercredis · <em>Familles.</em></h2>
+            </div>
+            <p class="section-intro">Certains mercredis, des balades de 1 h 15, vivantes et interactives, pensées pour réunir petits et grands, jalonnées d’anecdotes palpitantes et d’énigmes.</p>
+          </div>
+          <div class="program-overview">
+            <div class="program-overview-item"><span>Les jours</span><strong>Mercredi</strong></div>
+            <div class="program-overview-item"><span>Horaires · 1 h 15</span><strong>10 h 30 – 11 h 45</strong></div>
+            <p>Les places restantes sont indiquées pour chaque date et actualisées régulièrement.</p>
+          </div>
+          <div class="inspiration-head">
+            <p class="inspiration-label">Les prochaines balades familles</p>
+            <div class="inspiration-nav">
+              <button class="inspiration-nav-button" type="button" data-familles-prev aria-label="Voir les balades familles précédentes" disabled>←</button>
+              <button class="inspiration-nav-button" type="button" data-familles-next aria-label="Voir les balades familles suivantes">→</button>
+            </div>
+          </div>
+          <ul class="inspiration-track" id="familles-track" aria-label="Balades familles programmées" tabindex="0">
+            <li class="next-card family-card">
+              <div class="next-card-body">
+                <span class="next-card-kind">Balade familles · 1 h 15</span>
+                <h3 class="next-card-title">Chargement du programme…</h3>
+                <p class="next-card-summary">Les dates des balades familles s’affichent ici.</p>
+              </div>
+            </li>
+          </ul>
+          <p class="inspiration-hint">Faites glisser vers la droite ou utilisez les flèches pour découvrir les autres dates.</p>
+        </div>
+      </section>
+
+
+      <section class="category-section section-space" id="groupes" aria-labelledby="groupes-title">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">À la demande &amp; sur mesure</p>
+              <h2 id="groupes-title">Balades pour <em>les groupes.</em></h2>
+            </div>
+            <p class="section-intro">Associations, clubs, comités d’entreprise (CSE), groupes d’amis, anniversaires ou sorties scolaires&nbsp;: privatisez une de nos balades ou construisons une visite personnalisée selon vos souhaits. Groupes de seniors et visites en famille&nbsp;: 20 personnes maximum.</p>
+          </div>
+          <div class="group-quote-box">
+            <p class="group-quote-text">« Pour vos différentes occasions et vos groupes : choisissez votre thématique, votre quartier, votre date et votre horaire. Nous préparons ensemble une expérience sur mesure, vivante et conviviale. »</p>
+            <span class="group-quote-author">Marie-Tiyi Jalon — Animatrice culturelle et conteuse d’histoires</span>
+            <div class="group-quote-actions">
+              <a class="button button-primary" href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Une balade privée ou de groupe">Demander un devis ou réserver un groupe <span class="button-arrow" aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+          <div class="group-picker" aria-labelledby="group-picker-title">
+            <div class="group-picker-head">
+              <h3 id="group-picker-title">Les balades que je propose déjà</h3>
+              <p>Choisissez un parcours&nbsp;: un groupe privé peut privatiser n’importe laquelle de ces balades, à la date et à l’heure qui lui conviennent. Une autre idée&nbsp;? Décrivez-la dans votre demande, je construis le parcours avec vous.</p>
+            </div>
+            <ul class="topic-list group-picker-list">
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le Paris de Molière">Le Paris de Molière <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Sur les traces de l’enceinte de Philippe Auguste">Sur les traces de l’enceinte de Philippe Auguste <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le quartier chinois">Le quartier chinois <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="L’Inde à Paris">L’Inde à Paris <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Les ponts de Paris">Les ponts de Paris <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Les places royales">Les places royales <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le quartier et l’église Saint-Séverin">Le quartier et l’église Saint-Séverin <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Montmartre">Montmartre <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le Paris gallo-romain">Le Paris gallo-romain <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le quartier latin">Le quartier latin <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Le quartier des Halles">Le quartier des Halles <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="L’Île Saint-Louis">L’Île Saint-Louis <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Les Invalides">Les Invalides <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Les grands magasins">Les grands magasins <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Les passages couverts">Les passages couverts <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Art nouveau à Nation">Art nouveau à Nation <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Le Paris haussmannien">Le Paris haussmannien <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="La Défense et ses œuvres contemporaines">La Défense et ses œuvres contemporaines <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Champs de Mars et Tour Eiffel">Champs de Mars et Tour Eiffel <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Art déco et Art nouveau dans le XVIe arrondissement">Art déco et Art nouveau dans le XVIe arrondissement <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Le Marais">Le Marais <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Les Champs-Élysées">Les Champs-Élysées <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Le quartier de la Nouvelle Athènes">Le quartier de la Nouvelle Athènes <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Le Montparnasse des artistes">Le Montparnasse des artistes <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une visite pour un groupe de seniors" data-walk="Sur les pas d’Hector Guimard">Sur les pas d’Hector Guimard <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le quartier Montsouris">Le quartier Montsouris <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le cimetière du Père-Lachaise">Le cimetière du Père-Lachaise <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le cimetière du Montparnasse">Le cimetière du Montparnasse <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Les jardins et bosquets de Versailles">Les jardins et bosquets de Versailles <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le jardin du Luxembourg">Le jardin du Luxembourg <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="La Butte-aux-Cailles">La Butte-aux-Cailles <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le parc Monceau et ses hôtels particuliers">Le parc Monceau et ses hôtels particuliers <span aria-hidden="true">↗</span></a></li>
+              <li><a href="contact.html" data-interest="Je souhaite organiser une sortie pour une famille" data-walk="Le canal Saint-Martin">Le canal Saint-Martin <span aria-hidden="true">↗</span></a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <dialog class="legal-dialog walk-dialog" id="walk-dialog" aria-labelledby="walk-dialog-title">
+        <div class="legal-dialog-frame">
+          <header class="legal-dialog-head">
+            <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> <span id="walk-dialog-kicker">Présentation de la balade</span></p>
+            <h2 id="walk-dialog-title">Le Paris de Molière</h2>
+            <button class="legal-dialog-close" type="button" data-walk-close aria-label="Fermer la présentation de la balade">
+              <span aria-hidden="true">✕</span>
+            </button>
+          </header>
+          <div class="legal-dialog-body walk-dialog-body">
+            <div class="legal-dialog-content" id="walk-dialog-content">
+              <article class="legal-article walk-article" data-walk-article="Le Paris de Molière">
+                <p><strong>Partez sur les traces de Molière et découvrez l’homme derrière le dramaturge !</strong></p>
+                <p>Et si les rues de Paris nous racontaient une autre histoire de Molière ? Une histoire faite de passions, d’ambition, de scandales et de succès, bien loin de l’image parfois sage que nous gardons de l’auteur étudié à l’école.</p>
+                <p>Au fil de cette promenade au cœur du Paris historique, de l’église Saint-Eustache au Palais-Royal, en passant par le Louvre et la Comédie-Française, vous suivrez le parcours fascinant de Jean-Baptiste Poquelin, devenu Molière. Vous découvrirez les lieux qui ont marqué sa vie, de ses premières années dans le quartier des Halles à ses triomphes sur les scènes parisiennes, jusqu’à ses derniers jours rue de Richelieu.</p>
+                <p>Mais Molière, c’est bien plus que des pièces célèbres ! Comment ce jeune homme issu d’une famille bourgeoise a-t-il osé renoncer à la carrière que son père lui destinait pour se lancer dans le théâtre ? Comment a-t-il surmonté les dettes et les échecs de ses débuts ? Et comment a-t-il réussi à conquérir Louis XIV tout en provoquant la colère de certains milieux religieux ?</p>
+                <p>Vous découvrirez un homme audacieux, fin observateur de son époque, qui savait jouer avec les mots, les apparences et les travers de ses contemporains. Des coulisses de sa vie amoureuse aux querelles provoquées par ses pièces, en passant par les stratégies étonnamment modernes qu’il employait pour faire parler de lui, de nombreuses anecdotes vous surprendront.</p>
+                <p>De <em>L’Avare</em> au <em>Tartuffe</em>, du <em>Misanthrope</em> au <em>Malade imaginaire</em>, vous redécouvrirez également les œuvres qui ont fait son succès et comprendrez comment, derrière le rire, Molière savait dénoncer l’hypocrisie, les ambitions sociales et les abus de pouvoir.</p>
+                <p><strong>Une visite vivante, riche en anecdotes et en révélations</strong>, pour explorer le Paris du XVIIe siècle, découvrir les dessous du monde du théâtre et porter un regard nouveau sur celui qui continue, près de quatre siècles plus tard, à nous faire rire et réfléchir.</p>
+              </article>
+              <article class="legal-article walk-article" data-walk-article="Les grands magasins" hidden>
+                <p><strong>Et si nous remontions le temps pour découvrir comment Paris a inventé l’art du shopping ?</strong></p>
+                <p>Bien avant les vitrines de Noël, les grandes marques et les temples de la mode que nous connaissons aujourd’hui, les grands magasins ont révolutionné le commerce et transformé les habitudes des Parisiens. Partez à la découverte de deux monuments incontournables du boulevard Haussmann : le Printemps et les Galeries Lafayette !</p>
+                <p>Au fil de cette promenade, plongez dans le Paris du XIXe siècle, à l’époque où l’essor de la bourgeoisie, les nouvelles techniques industrielles et l’évolution de la mode font naître une véritable révolution commerciale. Découvrez comment ces enseignes ont imaginé une nouvelle façon de faire ses achats, mêlant élégance, nouveautés, prix fixes et mise en scène spectaculaire des marchandises.</p>
+                <p>Mais derrière ces façades somptueuses se cachent aussi des histoires étonnantes ! Qui étaient les hommes visionnaires à l’origine de ces empires commerciaux ? Comment le Printemps a-t-il surmonté un incendie dévastateur ? Et saviez-vous qu’un aviateur a réussi l’exploit de poser son avion sur le toit des Galeries Lafayette en 1919 ?</p>
+                <p>Vous apprendrez à décrypter les détails architecturaux de ces édifices exceptionnels : mosaïques dorées, ferronneries raffinées, sculptures symboliques et majestueuses coupoles Art nouveau. Chaque élément raconte une histoire et révèle les ambitions de leurs créateurs, bien décidés à émerveiller leur clientèle.</p>
+                <p>Nous évoquerons également les stratégies commerciales étonnamment modernes de ces grands magasins, leur rôle dans la démocratisation de la mode et l’art de la publicité, sans oublier la magie des vitrines de Noël, devenues une véritable tradition parisienne.</p>
+                <p><strong>Une visite passionnante entre histoire, architecture, mode et petites anecdotes méconnues</strong>, pour découvrir ces lieux familiers sous un tout autre regard et comprendre comment ils sont devenus de véritables symboles de la capitale.</p>
+              </article>
+              <article class="legal-article walk-article" data-walk-fallback hidden>
+                <p data-walk-fallback-text></p>
+              </article>
+            </div>
+          </div>
+          <footer class="walk-dialog-foot" id="walk-dialog-foot">
+            <span class="walk-dialog-foot-label">Réserver cette balade — choisissez une date :</span>
+            <div class="walk-dialog-dates" id="walk-dialog-dates"></div>
+          </footer>
+        </div>
+      </dialog>
+
+      <dialog class="legal-dialog booking-dialog" id="booking-dialog" aria-labelledby="booking-dialog-title">
+        <div class="legal-dialog-frame">
+          <header class="legal-dialog-head booking-dialog-head">
+            <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> <span data-booking-kicker>Réserver une balade</span></p>
+            <h2 id="booking-dialog-title" data-booking-title>Votre demande, étape par étape</h2>
+            <p class="booking-dialog-meta" data-booking-meta hidden></p>
+            <button class="legal-dialog-close" type="button" data-booking-close aria-label="Fermer le formulaire de réservation">
+              <span aria-hidden="true">✕</span>
+            </button>
+          </header>
+          <div class="booking-dialog-body">
+            <form class="contact-form" id="contact-form" aria-labelledby="booking-form-title">
+              <div class="form-heading">
+                <span>Votre demande</span>
+                <span class="form-required-note"><b aria-hidden="true">*</b> Obligatoire</span>
+              </div>
+              <ol class="booking-steps" aria-label="Étapes du formulaire">
+                <li><span>01</span><b>Votre balade</b></li>
+                <li><span>02</span><b>La visite</b></li>
+                <li><span>03</span><b>Vos coordonnées</b></li>
+              </ol>
+
+              <fieldset class="form-step form-step-project">
+                <legend><span class="form-step-number">01</span> Votre balade</legend>
+                <label for="topic">Type de sortie
+                  <select id="topic" name="topic">
+                    <option value="Je souhaite réserver une balade publique">Grand public · s’inscrire</option>
+                    <option value="Je souhaite réserver une place en balade seniors">Seniors · balade programmée</option>
+                    <option value="Je souhaite réserver une place en balade familles">Familles · balade programmée</option>
+                    <option value="Je souhaite organiser une visite pour un groupe de seniors">Seniors · visite sur demande</option>
+                    <option value="Je souhaite organiser une sortie pour une famille">Famille · visite sur demande</option>
+                    <option value="Je souhaite organiser une sortie scolaire">Écoles · sur demande</option>
+                    <option value="Je souhaite organiser une sortie privée ou de groupe">Groupe privé · sur demande</option>
+                    <option value="J’ai une autre question">Une autre question</option>
+                  </select>
+                </label>
+              </fieldset>
+
+              <fieldset class="form-step form-step-visit">
+                <legend><span class="form-step-number">02</span> Votre visite et votre groupe</legend>
+                <div class="form-row form-row-booking">
+                  <label for="session" id="public-session-field"><span class="field-name">Balade et date <b aria-hidden="true">*</b></span><select id="session" name="session" required disabled><option value="">Chargement des dates…</option></select></label>
+                </div>
+                <input id="participants" name="participants" type="hidden" value="0" disabled>
+                <fieldset class="age-groups" id="age-groups">
+                  <legend>Nombre de personnes par tarif</legend>
+                  <p class="age-groups-intro">Indiquez uniquement les quantités : aucun nom ni âge exact n’est demandé.</p>
+                  <div class="age-group-grid">
+                    <label for="age-standard"><span>Plein tarif</span><small>26 ans et plus · 15&nbsp;€</small><input id="age-standard" name="age_standard" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="standard"></label>
+                    <label for="age-youth"><span>Jeunes de 15 à 25 ans</span><small>10&nbsp;€</small><input id="age-youth" name="age_youth" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="youth"></label>
+                    <label for="age-child"><span>Enfants de 5 à 14 ans</span><small>8&nbsp;€</small><input id="age-child" name="age_child" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="child"></label>
+                    <label for="age-under-five"><span>Moins de 5 ans</span><small>Gratuit</small><input id="age-under-five" name="age_under_five" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="underFive"></label>
+                  </div>
+                  <div class="booking-estimate" aria-live="polite">
+                    <p><span>Total de participants</span><output id="participants-total" for="age-standard age-youth age-child age-under-five">0</output></p>
+                    <p><span>Montant estimé</span><output id="booking-estimate" for="age-standard age-youth age-child age-under-five">—</output></p>
+                  </div>
+                  <p class="age-group-status" id="age-group-status" role="status" aria-live="polite">Le total inclut les enfants gratuits et reste limité aux places de la séance : 25 pour le tout public, 20 pour les seniors et les familles.</p>
+                </fieldset>
+                <div class="form-row form-row-booking custom-booking-fields" id="custom-booking-fields" hidden>
+                  <label for="date">Date souhaitée <span class="optional">(facultatif)</span><input id="date" name="date" type="date"></label>
+                  <label for="slot">Créneau souhaité <span class="optional">(facultatif)</span><select id="slot" name="slot"><option>À convenir</option><option>10 h 30–12 h</option></select></label>
+                  <label for="custom-participants">Nombre de personnes estimé <span class="optional">(facultatif)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="100" step="1" placeholder="Ex. 12" aria-describedby="custom-capacity-note"></label>
+                </div>
+                <p class="booking-capacity-note custom-capacity-note" id="custom-capacity-note" role="status" aria-live="polite">Indiquez le nombre de personnes&nbsp;: 20 personnes maximum pour un groupe de seniors ou une famille.</p>
+                <p class="booking-capacity-note" id="session-status" role="status" aria-live="polite">Sélectionnez une balade et une date pour consulter les places disponibles.</p>
+              </fieldset>
+
+              <fieldset class="form-step form-step-contact">
+                <legend><span class="form-step-number">03</span> Vos coordonnées</legend>
+                <div class="form-row form-row-contact">
+                  <label for="first-name"><span class="field-name">Prénom <b aria-hidden="true">*</b></span><input id="first-name" name="first_name" autocomplete="given-name" placeholder="Camille" required></label>
+                  <label for="last-name"><span class="field-name">Nom <b aria-hidden="true">*</b></span><input id="last-name" name="last_name" autocomplete="family-name" placeholder="Dupont" required></label>
+                  <label for="email"><span class="field-name">Votre e-mail <b aria-hidden="true">*</b></span><input id="email" name="email" type="email" autocomplete="email" placeholder="camille@exemple.fr" required></label>
+                  <label for="phone"><span class="field-name">Téléphone <b aria-hidden="true">*</b></span><input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="06 12 34 56 78" required></label>
+                </div>
+                <label for="message">Un détail à partager <span class="optional">(facultatif)</span><textarea id="message" name="message" rows="3" placeholder="Une question ou une précision utile…"></textarea></label>
+                <div class="form-honeypot" aria-hidden="true">
+                  <label for="website">Site web (ne pas remplir)</label>
+                  <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+                </div>
+              </fieldset>
+
+              <p class="booking-recap" id="booking-recap" role="status" aria-live="polite" hidden></p>
+              <div class="form-bottom">
+                <button class="button button-submit" type="submit" id="submit-booking">Réserver ma place <span class="button-arrow" aria-hidden="true">↗</span></button>
+                <p class="form-hint">Pour une balade programmée (tout public, seniors, familles), la confirmation et sa référence s’affichent ici si des places sont disponibles, et un e-mail de confirmation part aussitôt vers votre adresse. Pour une demande sur mesure (groupe de seniors, écoles, groupe privé), votre demande est envoyée directement à Marie-Tiyi et vous recevez un e-mail récapitulatif.</p>
+              </div>
+              <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+              <div class="booking-calendar" id="booking-calendar" hidden>
+                <p class="booking-calendar-label">Gardez la date</p>
+                <p class="booking-calendar-text" data-calendar-text></p>
+                <a class="button button-calendar" data-calendar-download href="#" download>
+                  Ajouter à mon agenda <span aria-hidden="true">↓</span>
+                </a>
+              </div>
+              <p class="privacy-note">Vos informations servent à traiter cette demande. <a href="#legal-confidentialite" data-legal-open="confidentialite">Consulter la notice de confidentialité</a>.</p>
+            </form>
+          </div>
+        </div>
+      </dialog>
+      <p class="booking-notice" id="booking-notice" role="status" aria-live="polite" hidden></p>
+
+      <dialog class="legal-dialog" id="legal-dialog" aria-labelledby="legal-dialog-title">
+        <div class="legal-dialog-frame">
+          <header class="legal-dialog-head">
+            <p class="eyebrow"><span class="eyebrow-mark" aria-hidden="true">✳</span> Informations juridiques</p>
+            <h2 id="legal-dialog-title">Mentions légales &amp; données personnelles</h2>
+            <button class="legal-dialog-close" type="button" data-legal-close aria-label="Fermer les informations juridiques">
+              <span aria-hidden="true">✕</span>
+            </button>
+          </header>
+          <div class="legal-dialog-body">
+            <nav class="legal-dialog-rail" aria-label="Sommaire des informations juridiques">
+              <a class="legal-rail-link" href="#legal-mentions" data-legal-jump="mentions">Mentions légales</a>
+              <a class="legal-rail-link" href="#legal-confidentialite" data-legal-jump="confidentialite">Confidentialité &amp; données personnelles</a>
+              <p class="legal-rail-status"><span>Version de travail</span>Identité, hébergement et durées de conservation restent à valider avant publication.</p>
+            </nav>
+            <div class="legal-dialog-content">
+              <article class="legal-article" id="legal-mentions" data-legal-article="mentions">
+                <h3>Mentions légales</h3>
+                <p class="legal-draft-notice"><strong>À confirmer avant publication :</strong> d’après les informations transmises, l’identité indiquée est « MADAME MARIE-TIYI JALON », SIREN 894 639 921, à Asnières-sur-Seine (92600). La forme juridique exacte, l’adresse complète, le SIRET de l’établissement et l’hébergeur restent à vérifier. Le site reste en mode non indexable tant que les mentions ne sont pas complètes.</p>
+                <h4>Éditeur du site</h4>
+                <p><strong>Nom commercial :</strong> Balades Culturelles<br><strong>Éditrice et directrice de la publication :</strong> Marie-Tiyi Jalon<br><strong>Identité juridique communiquée :</strong> MADAME MARIE-TIYI JALON<br><strong>SIREN communiqué :</strong> 894 639 921<br><strong>Commune communiquée :</strong> Asnières-sur-Seine (92600)<br><strong>Contact :</strong> <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> · <a href="tel:+33601740449">06 01 74 04 49</a></p>
+                <p><strong>À confirmer :</strong> forme juridique exacte, adresse professionnelle complète à publier, SIRET de l’établissement et, si applicable, mentions d’immatriculation au RCS ou au répertoire des métiers.</p>
+                <h4>Hébergement</h4>
+                <p>Le nom légal, l’adresse et les coordonnées de l’hébergeur devront être renseignés une fois l’hébergement de production et le domaine choisis. La prévisualisation locale n’est pas l’hébergement public du site.</p>
+                <h4>Propriété intellectuelle</h4>
+                <p>Les contenus et visuels du site ne peuvent être réutilisés sans autorisation. Les illustrations générées sont des visuels d’ambiance et ne constituent pas des photographies documentaires des lieux.</p>
+              </article>
+              <article class="legal-article" id="legal-confidentialite" data-legal-article="confidentialite">
+                <h3>Confidentialité &amp; données personnelles</h3>
+                <p class="legal-draft-notice"><strong>Notice préparatoire RGPD :</strong> l’identité et le SIREN indiqués proviennent des informations transmises par l’éditrice. La forme juridique, l’adresse complète, l’hébergement et les durées de conservation doivent encore être confirmés avant mise en ligne. Cette notice ne remplace pas une validation juridique.</p>
+                <h4>Responsable et contact</h4>
+                <p>Le responsable du traitement est Marie-Tiyi Jalon, pour Balades Culturelles (identité juridique communiquée : MADAME MARIE-TIYI JALON, SIREN 894 639 921). Pour toute question ou demande relative à vos données : <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> ou <a href="tel:+33601740449">06 01 74 04 49</a>. La forme juridique exacte et l’adresse professionnelle complète restent à préciser dans les mentions légales.</p>
+                <h4>Données et finalités</h4>
+                <p>Le site recueille le prénom, le nom, l’adresse e-mail et le numéro de téléphone (ces quatre champs sont obligatoires pour une réservation), la balade et la date choisies, le nombre de personnes par tranche tarifaire, ainsi que les précisions que vous ajoutez. Ces informations servent à répondre aux demandes, gérer les réservations, vous transmettre le lieu de rendez-vous ou vous prévenir d’un changement, et vérifier le nombre de places. Les coordonnées des personnes ayant réservé sont également conservées dans un carnet d’adresses privé (Google Sheets), accessible à la seule éditrice, afin d’éviter les doublons et de préparer les visites. Aucun nom ni âge exact des enfants n’est demandé. Aucun paiement en ligne ni prospection commerciale automatisée n’est effectué par le site.</p>
+                <h4>Base légale et destinataires</h4>
+                <p>Le traitement d’une réservation ou d’un devis demandé repose sur les mesures précontractuelles et, le cas échéant, l’exécution du contrat (article 6, paragraphe 1, point b du RGPD). Les données sont accessibles à Marie-Tiyi Jalon et aux prestataires techniques strictement nécessaires. Si la version Google est déployée, Google Apps Script et Google Sheets interviendront selon les paramètres du compte propriétaire; l’hébergement, les éventuels transferts et les garanties contractuelles devront être vérifiés avant publication. Aucune prospection commerciale automatisée n’est effectuée.</p>
+                <h4>Conservation</h4>
+                <p>Les durées exactes doivent être fixées avant publication : demandes sans réservation, réservations et éventuels justificatifs comptables doivent être distingués. Les données ne doivent pas être conservées plus longtemps que nécessaire, sous réserve des obligations légales applicables.</p>
+                <h4>Vos droits</h4>
+                <p>Vous pouvez demander l’accès à vos données, leur rectification ou leur effacement, la limitation du traitement et, lorsque les conditions légales sont réunies, leur portabilité ou vous opposer au traitement. Vous pouvez également adresser une réclamation à la <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">CNIL</a>. Les champs indispensables à une réservation sont nécessaires pour la traiter.</p>
+                <h4>Cookies et décisions automatisées</h4>
+                <p>Aucun outil de publicité ou de mesure d’audience n’est intégré au site à ce jour. Ce point devra être revérifié après le choix de l’hébergement. Le système vérifie automatiquement les places disponibles, mais ne réalise ni profilage ni décision automatisée concernant les personnes.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </dialog>
+
+    </main>
+
+<footer class="site-footer">
+      <div class="footer-inner section-shell">
+        <a class="brand footer-brand" href="index.html">
+          <span class="brand-logo" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
+          <span class="brand-lockup"><strong>Balades culturelles</strong><small>À Paris et en Île-de-France</small></span>
+        </a>
+        <p>Le patrimoine, les paysages et les histoires — à pied.</p>
+        <div class="footer-meta"><span>© <span data-year>2026</span> Balades Culturelles</span><a href="#legal-mentions" data-legal-open="mentions">Mentions légales</a><a href="#legal-confidentialite" data-legal-open="confidentialite">Confidentialité</a><a href="contact.html">Écrire à Marie-Tiyi <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </footer>
+  </body>
+</html>

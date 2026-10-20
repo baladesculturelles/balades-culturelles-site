@@ -2,12 +2,38 @@
 // les demandes sur mesure utilisent toujours le courriel.
 const CONTACT_EMAIL = "balades.culturelles@gmail.com";
 const PUBLIC_TOPIC = "Je souhaite réserver une balade publique";
+const SENIOR_TOPIC = "Je souhaite réserver une place en balade seniors";
+const FAMILY_TOPIC = "Je souhaite réserver une place en balade familles";
 const MAX_CAPACITY = 25;
+// Groupes de seniors et visites en famille : 20 personnes au maximum.
+const GROUP_CAPACITY = 20;
+// Places par séance : 25 pour les week-ends tout public, 20 pour les seniors et les familles.
+const KIND_CAPACITY = Object.freeze({ public: MAX_CAPACITY, seniors: GROUP_CAPACITY, familles: GROUP_CAPACITY });
+// Les trois programmes (week-ends, jeudis, familles) se réservent de la même façon.
+const PROGRAMME_TOPICS = Object.freeze([PUBLIC_TOPIC, SENIOR_TOPIC, FAMILY_TOPIC]);
+// Un programme par type de sortie : les dates d’un programme ne se mélangent pas
+// avec celles d’un autre, même quand la balade porte le même nom.
+const TOPIC_KINDS = Object.freeze({
+  [PUBLIC_TOPIC]: "public",
+  [SENIOR_TOPIC]: "seniors",
+  [FAMILY_TOPIC]: "familles",
+});
+const CUSTOM_CAPACITY = 100;
+const SMALL_GROUP_TOPICS = Object.freeze([
+  "Je souhaite organiser une visite pour un groupe de seniors",
+  "Je souhaite organiser une sortie pour une famille",
+]);
 // URL de la Web App Apps Script (…/exec), pour la version GitHub Pages. Laisser vide avec le serveur Python local.
 const BOOKING_API_URL = "https://script.google.com/macros/s/AKfycbzo7ZZCjaeM2cOuqeLq08qfhwOBwKuCn2zWvHCXamJhlxy67ZM1or_glOYAkx32BKe4hA/exec";
-const IS_LOCAL_PREVIEW = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.hostname.endsWith(".e2b.app");
-const ACTIVE_API_URL = IS_LOCAL_PREVIEW ? "" : BOOKING_API_URL;
-const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 12, child: 8, underFive: 0 });
+// Le site publié interroge la Web App Google. Partout ailleurs (aperçu Arena, serveur
+// local, fichier ouvert dans un navigateur), l’API du serveur Python voisin est
+// essayée d’abord — elle sert le programme complet, seniors et familles compris —
+// puis la Web App prend le relais si elle n’est pas joignable.
+const PUBLISHED_HOSTS = Object.freeze(["baladesculturelles.github.io"]);
+const IS_PUBLISHED_SITE = PUBLISHED_HOSTS.includes(window.location.hostname);
+const API_BASES = IS_PUBLISHED_SITE ? [BOOKING_API_URL] : ["", BOOKING_API_URL];
+let activeApiBase = API_BASES[0];
+const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 10, child: 8, underFive: 0 });
 
 const header = document.querySelector("[data-header]");
 const menuToggle = document.querySelector(".menu-toggle");
@@ -24,12 +50,93 @@ const customBookingFields = document.querySelector("#custom-booking-fields");
 const sessionStatus = document.querySelector("#session-status");
 const participantsInput = document.querySelector("#participants");
 const customParticipantsInput = document.querySelector("#custom-participants");
+const customCapacityNote = document.querySelector("#custom-capacity-note");
 const ageGroupsFieldset = document.querySelector("#age-groups");
 const ageGroupInputs = [...document.querySelectorAll("[data-age-group]")];
 const participantsTotalOutput = document.querySelector("#participants-total");
 const bookingEstimateOutput = document.querySelector("#booking-estimate");
 const ageGroupStatus = document.querySelector("#age-group-status");
 const submitButton = document.querySelector("#submit-booking");
+
+// Chaque balade a son lien : quand la fenêtre s'ouvre depuis ce lien, l'offre et
+// la balade sont figées. Le visiteur garde seulement le nombre de personnes et
+// ses coordonnées. Pour une autre balade, il revient au programme.
+const bookingLock = { interest: "", walk: "", date: "", slot: "" };
+let lockedTopicInput = null;
+const bookingLockNote = (() => {
+  if (!publicSessionField) return null;
+  const note = document.createElement("p");
+  note.className = "booking-lock-note";
+  note.id = "booking-lock-note";
+  note.setAttribute("role", "status");
+  note.hidden = true;
+  publicSessionField.after(note);
+  sessionSelect?.setAttribute("aria-describedby", "booking-lock-note");
+  return note;
+})();
+
+if (contactForm && topicSelect) {
+  // Un <select> désactivé n'est pas envoyé : ce champ caché transmet le choix figé.
+  lockedTopicInput = document.createElement("input");
+  lockedTopicInput.type = "hidden";
+  lockedTopicInput.name = "topic";
+  lockedTopicInput.disabled = true;
+  contactForm.append(lockedTopicInput);
+}
+
+/** Fige (ou libère) l'offre et la balade selon le lien d'origine. */
+function setBookingLock(target = {}) {
+  const interest = target.interest || "";
+  const publicBooking = PROGRAMME_TOPICS.includes(interest);
+  bookingLock.interest = interest;
+  bookingLock.walk = publicBooking ? target.walk || "" : "";
+  bookingLock.date = publicBooking ? target.date || "" : "";
+  bookingLock.slot = publicBooking ? target.slot || "" : "";
+  // Les options de date sont reconstruites pour ne garder que la balade choisie.
+  if (availabilityLoaded && sessionSelect) renderSessionOptions();
+  syncBookingLockUi();
+}
+
+/** Applique le verrouillage à l'interface de la fenêtre de réservation. */
+function syncBookingLockUi() {
+  if (topicSelect) topicSelect.disabled = Boolean(bookingLock.interest);
+  if (lockedTopicInput) {
+    lockedTopicInput.disabled = !bookingLock.interest;
+    lockedTopicInput.value = topicSelect?.value || "";
+  }
+  publicSessionField?.classList.toggle("is-locked", Boolean(bookingLock.walk));
+  if (sessionSelect) {
+    if (!isPublicBooking()) {
+      // Cette fenêtre ne réserve pas une place : aucune date ne doit rester sélectionnée.
+      sessionSelect.value = "";
+      sessionSelect.disabled = true;
+    } else if (!bookingLock.walk) {
+      sessionSelect.disabled = !isPublicBooking() || !availabilityLoaded;
+    } else {
+      const match = findSessionForTarget({ walk: bookingLock.walk, date: bookingLock.date, slot: bookingLock.slot });
+      if (match) {
+        sessionSelect.value = match.id;
+        // Une date précise reste figée ; une balade sans date laisse choisir le jour.
+        sessionSelect.disabled = Boolean(bookingLock.date) || !availabilityLoaded;
+      } else {
+        sessionSelect.disabled = !availabilityLoaded;
+      }
+    }
+  }
+  if (bookingLockNote) {
+    const verrouille = Boolean(bookingLock.interest);
+    bookingLockNote.hidden = !verrouille;
+    if (verrouille) {
+      if (bookingLock.walk && bookingLock.date) {
+        bookingLockNote.textContent = `Balade et date choisies depuis le programme : ${bookingLock.walk}, ${formatFrenchDate(bookingLock.date)}. Pour une autre balade, revenez au programme.`;
+      } else if (bookingLock.walk) {
+        bookingLockNote.textContent = `Balade choisie depuis le programme : ${bookingLock.walk}. Choisissez la date qui vous convient ; pour une autre balade, revenez au programme.`;
+      } else {
+        bookingLockNote.textContent = "Le type de sortie est choisi depuis le programme. Pour en changer, revenez au programme des balades.";
+      }
+    }
+  }
+}
 const firstNameInput = document.querySelector("#first-name");
 const lastNameInput = document.querySelector("#last-name");
 const phoneInput = document.querySelector("#phone");
@@ -77,6 +184,261 @@ if (menuToggle && navigation) {
   navigation.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeMenu));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenu();
+  });
+}
+
+// ------------------------------------------------------------------ Onglet actif
+// Chaque page du site a son onglet. Sur une page à sections (balades), le menu
+// suit en plus la rubrique en cours de lecture, sans modifier le défilement.
+const currentFileName = (() => {
+  const file = window.location.pathname.split("/").pop();
+  return !file || file === "/" ? "index.html" : file;
+})();
+const navLinks = navigation ? [...navigation.querySelectorAll("a[href]")] : [];
+const navTargets = navLinks.map((link) => {
+  let url;
+  try {
+    url = new URL(link.getAttribute("href"), window.location.href);
+  } catch (error) {
+    url = null;
+  }
+  const file = url ? (url.pathname.split("/").pop() || "index.html") : "";
+  const anchor = url ? url.hash.slice(1) : "";
+  const section = anchor && file === currentFileName ? document.getElementById(anchor) : null;
+  return { link, file, anchor, section, samePage: file === currentFileName };
+});
+
+function setCurrentNav(targetLink) {
+  navTargets.forEach(({ link }) => {
+    const actif = Boolean(targetLink) && link === targetLink;
+    link.classList.toggle("is-current", actif);
+    if (actif) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  navigation?.querySelectorAll(".nav-item-dropdown").forEach((item) => {
+    const toggle = item.querySelector(".nav-dropdown-toggle");
+    if (!toggle) return;
+    const descendant = Boolean(item.querySelector(".nav-subnav a.is-current"));
+    toggle.classList.toggle("is-ancestor", descendant);
+    if (descendant && !toggle.classList.contains("is-current")) toggle.setAttribute("aria-current", "true");
+    else if (!descendant && !toggle.classList.contains("is-current")) toggle.removeAttribute("aria-current");
+  });
+}
+
+if (navTargets.length) {
+  const pageLinks = navTargets.filter((item) => item.samePage && !item.anchor);
+  const sectionLinks = navTargets.filter((item) => item.samePage && item.section);
+
+  const resolveCurrentLink = () => {
+    // En haut de page, c'est l'onglet de la page qui est actif.
+    if (window.scrollY <= 0) {
+      const primary = pageLinks[0] || navTargets.find((item) => item.file === currentFileName && !item.anchor);
+      return primary ? primary.link : null;
+    }
+    if (sectionLinks.length) {
+      const offset = (header ? header.offsetHeight : 0) + 32;
+      let courant = null;
+      sectionLinks.forEach((item) => {
+        if (item.section.getBoundingClientRect().top - offset <= 0) courant = item;
+      });
+      // Sur une page à sections, l'onglet de la page reste actif en haut de page.
+      if (!courant) {
+        const primary = pageLinks[0] || navTargets.find((item) => item.file === currentFileName && !item.anchor);
+        return primary ? primary.link : null;
+      }
+      return courant.link;
+    }
+    if (pageLinks.length) return pageLinks[0].link;
+    const exact = navTargets.find((item) => item.file === currentFileName);
+    return exact ? exact.link : null;
+  };
+
+  let navFrame = 0;
+  const updateCurrentNav = () => {
+    navFrame = 0;
+    setCurrentNav(resolveCurrentLink());
+  };
+  const requestNavUpdate = () => {
+    if (!navFrame) navFrame = window.requestAnimationFrame(updateCurrentNav);
+  };
+  updateCurrentNav();
+  window.addEventListener("scroll", requestNavUpdate, { passive: true });
+  window.addEventListener("resize", requestNavUpdate);
+  navigation.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (link) setCurrentNav(link);
+  });
+}
+
+// ------------------------------------------------------------------ Fenêtre de réservation
+// Le formulaire n'est plus posé dans la page : il s'ouvre par-dessus quand on
+// clique sur une visite. Une visite complète n'ouvre rien : elle affiche
+// seulement « Indisponible ».
+const bookingDialog = document.querySelector("#booking-dialog");
+const bookingNotice = document.querySelector("#booking-notice");
+let bookingTrigger = null;
+let bookingNoticeTimer = 0;
+
+function showBookingNotice(message) {
+  if (!bookingNotice) return;
+  bookingNotice.textContent = message;
+  bookingNotice.hidden = false;
+  bookingNotice.classList.add("is-visible");
+  window.clearTimeout(bookingNoticeTimer);
+  bookingNoticeTimer = window.setTimeout(() => {
+    bookingNotice.hidden = true;
+    bookingNotice.classList.remove("is-visible");
+  }, 4500);
+}
+
+function bookingTargetFromLink(link) {
+  const card = link?.closest?.("[data-program-card]");
+  return {
+    interest: link?.dataset?.interest || "",
+    walk: link?.dataset?.walk || card?.dataset.walk || "",
+    date: link?.dataset?.date || link?.dataset?.programDate || "",
+    slot: link?.dataset?.slot || card?.dataset?.slot || "",
+  };
+}
+
+function bookingIsSoldOut(link) {
+  if (!link) return false;
+  return link.dataset.soldOut === "true"
+    || link.dataset.allSoldOut === "true"
+    || link.getAttribute("aria-disabled") === "true";
+}
+
+function describeBookingTarget(target) {
+  const parts = [];
+  if (target.date) {
+    try {
+      parts.push(formatFrenchDate(target.date));
+    } catch (error) {
+      parts.push(target.date);
+    }
+  }
+  if (target.slot) parts.push(target.slot);
+  const session = target.walk ? findSessionForTarget(target) : null;
+  if (session) parts.push(pluralPlaces(session.remaining));
+  return parts.join(" · ");
+}
+
+function updateBookingDialogHeading(target, interest) {
+  const kicker = bookingDialog?.querySelector("[data-booking-kicker]");
+  const title = bookingDialog?.querySelector("[data-booking-title]");
+  const meta = bookingDialog?.querySelector("[data-booking-meta]");
+  const publicBooking = PROGRAMME_TOPICS.includes(interest);
+  if (kicker) {
+    kicker.textContent = publicBooking
+      ? "Réserver une balade"
+      : interest === SENIOR_TOPIC ? "Réserver une balade seniors"
+      : interest === FAMILY_TOPIC ? "Réserver une balade familles"
+      : interest === "J’ai une autre question" ? "Une question" : "Demande sur mesure";
+  }
+  if (title) {
+    title.textContent = target.walk || (publicBooking ? "Choisissez votre balade" : "Parlons de votre balade");
+  }
+  if (meta) {
+    const description = describeBookingTarget(target);
+    meta.textContent = description;
+    meta.hidden = !description;
+  }
+}
+
+function openBookingDialog(target = {}, trigger = null) {
+  if (!bookingDialog || !contactForm) return;
+  if (trigger instanceof HTMLElement) bookingTrigger = trigger;
+  showBookingNotice("");
+  if (bookingNotice) bookingNotice.hidden = true;
+  updateFormStatus("");
+
+  const interest = target.interest || topicSelect?.value || PUBLIC_TOPIC;
+  // L'offre et la balade viennent du lien cliqué : elles ne se changent plus ici.
+  setBookingLock({ interest, walk: target.walk, date: target.date, slot: target.slot });
+  if (!availabilityLoaded && typeof loadAvailability === "function") {
+    if (sessionStatus) sessionStatus.textContent = "Chargement des dates disponibles…";
+    loadAvailability();
+  }
+  if (topicSelect) {
+    topicSelect.value = interest;
+    updateBookingMode();
+  }
+  if (messageInput && target.walk && (!messageInput.value.trim() || messageInput.dataset.prefilled === "true")) {
+    messageInput.value = `Balade souhaitée : ${target.walk}`;
+    messageInput.dataset.prefilled = "true";
+  }
+  if (PROGRAMME_TOPICS.includes(interest)) {
+    chooseSession({ walk: target.walk, date: target.date, slot: target.slot });
+  } else {
+    if (dateInput && target.date) dateInput.value = target.date;
+    if (slotSelect) slotSelect.value = target.slot || "À convenir";
+  }
+  updateBookingDialogHeading(target, interest);
+
+  if (!bookingDialog.open) {
+    if (typeof bookingDialog.showModal === "function") bookingDialog.showModal();
+    else {
+      bookingDialog.classList.add("is-fallback");
+      bookingDialog.setAttribute("open", "");
+    }
+  }
+  const dialogBody = bookingDialog.querySelector(".booking-dialog-body");
+  if (dialogBody) dialogBody.scrollTop = 0;
+  window.setTimeout(() => {
+    const nextField = PROGRAMME_TOPICS.includes(interest) && sessionSelect && !sessionSelect.disabled
+      ? sessionSelect
+      : dateInput && !PROGRAMME_TOPICS.includes(interest) ? dateInput : sessionSelect;
+    nextField?.focus({ preventScroll: true });
+  }, 30);
+}
+
+function closeBookingDialog() {
+  if (!bookingDialog?.open) return;
+  if (typeof bookingDialog.close === "function") bookingDialog.close();
+  else {
+    bookingDialog.removeAttribute("open");
+    bookingDialog.classList.remove("is-fallback");
+  }
+}
+
+if (bookingDialog) {
+  bookingDialog.querySelector("[data-booking-close]")?.addEventListener("click", closeBookingDialog);
+  // Clic sur le fond assombri : on referme, comme les fenêtres juridiques.
+  bookingDialog.addEventListener("click", (event) => {
+    if (event.target === bookingDialog) closeBookingDialog();
+  });
+  bookingDialog.addEventListener("close", () => {
+    if (bookingTrigger && document.contains(bookingTrigger)) bookingTrigger.focus({ preventScroll: true });
+    bookingTrigger = null;
+  });
+}
+
+// Un seul point d'entrée pour tous les boutons « Réserver » du site.
+// Seuls les liens qui portent un motif de demande ([data-interest]) ouvrent la
+// fenêtre : le lien « Me contacter » du menu mène bien à la page contact.
+document.addEventListener("click", (event) => {
+  const link = event.target instanceof Element ? event.target.closest("[data-interest]") : null;
+  if (!link) return;
+  event.preventDefault();
+  closeMenu();
+  if (bookingIsSoldOut(link)) {
+    showBookingNotice("Indisponible — cette balade est complète. Choisissez une autre date.");
+    return;
+  }
+  openBookingDialog(bookingTargetFromLink(link), link);
+});
+
+// Lien direct (ancien signet, partage) : la fenêtre s'ouvre avec la visite choisie.
+function openBookingFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const interest = params.get("interest") || "";
+  const walk = params.get("walk") || "";
+  if (!interest && !walk) return;
+  openBookingDialog({
+    interest,
+    walk,
+    date: params.get("date") || "",
+    slot: params.get("slot") || "",
   });
 }
 
@@ -374,6 +736,7 @@ if (availableFilterButton) availableFilterButton.disabled = true;
 // « 13 balades » est l’offre de la saison : le nombre ne baisse pas quand une date passe.
 // Seul le nombre de dates à venir évolue, et il disparaît 24 h après chaque balade.
 function updateProgramCounts() {
+  if (!programCards.length) return;
   const dates = programCards.reduce((total, card) => total + card.querySelectorAll("[data-program-date]:not([hidden])").length, 0);
   const datesOutput = document.querySelector("[data-count-dates]");
   if (datesOutput) datesOutput.textContent = String(dates);
@@ -455,12 +818,34 @@ const WALK_IMAGE_SIZES = Object.freeze({
   "walk-montparnasse": [800, 500],
   "walk-montsouris": [800, 500],
   "walk-nation-art-nouveau": [800, 500],
-  "walk-passages-couverts": [800, 500],
+  "walk-passages-couverts": [1080, 1080],
   "walk-pere-lachaise": [800, 500],
   "walk-philippe-auguste": [800, 500],
   "walk-quartier-chinois": [800, 500],
   "walk-tour-eiffel": [800, 500],
 });
+
+/** « 2027-01-28 » → { jour: "28", semaine: "jeu.", mois: "janv." } */
+function shortDateParts(isoDate) {
+  const moment = new Date(`${isoDate}T12:00:00Z`);
+  const format = (options) => new Intl.DateTimeFormat("fr-FR", { ...options, timeZone: "UTC" }).format(moment);
+  return {
+    jour: format({ day: "numeric" }),
+    semaine: format({ weekday: "short" }),
+    mois: format({ month: "short" }),
+  };
+}
+
+/** Toutes les dates s'annoncent de la même façon : « 28 JANV. · 25 places ». */
+function dateChipHtml(isoDate) {
+  const { jour, semaine, mois } = shortDateParts(isoDate);
+  return `<span class="next-card-date-chip"><b>${escapeHtml(jour)}</b> ${escapeHtml(semaine)} ${escapeHtml(mois)}</span>`;
+}
+
+/** « 10 h 30–12 h » → « 10 h 30 – 12 h » : lisible et respiré. */
+function formatSlot(slot) {
+  return String(slot || "").replace(/\s*[–-]\s*/g, " – ").trim();
+}
 
 const escapeHtml = (value) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -528,6 +913,7 @@ function populateCardsToTrack(track, prevBtn, nextBtn, baladesList, defaultInter
         <span class="next-card-kind">${escapeHtml(kind)}</span>
         <h3 class="next-card-title"><button type="button" class="next-card-title-link" data-walk-open="${escapeHtml(walk)}">${escapeHtml(walk)}</button></h3>
         <p class="next-card-summary">${escapeHtml(summary)}</p>
+        <p class="next-card-time"><span class="next-card-time-label">Horaires</span> <strong>${escapeHtml(formatSlot(slot))}</strong></p>
         <div class="next-card-dates" aria-label="Prochaines dates pour ${escapeHtml(walk)}">${datesHtml}</div>
       </div>`;
 
@@ -537,6 +923,11 @@ function populateCardsToTrack(track, prevBtn, nextBtn, baladesList, defaultInter
     inspirationCards.push({ carte, couplesDates });
   });
 
+  setupInspirationCarousel(track, prevBtn, nextBtn);
+}
+
+// Câblage commun des carrousels : flèches, pas de défilement et état des boutons.
+function setupInspirationCarousel(track, prevBtn, nextBtn) {
   const updateButtons = () => {
     const max = track.scrollWidth - track.clientWidth - 2;
     if (prevBtn) prevBtn.disabled = track.scrollLeft <= 2;
@@ -563,6 +954,164 @@ function populateCardsToTrack(track, prevBtn, nextBtn, baladesList, defaultInter
   updateButtons();
 }
 
+// Programme des balades seniors : certains jeudis de la saison 2026-2027.
+const SENIOR_SLOT = "10 h 30–11 h 45";
+const SENIOR_SESSIONS = Object.freeze([
+  { date: "2026-09-24", walk: "Le cimetière du Montparnasse" },
+  { date: "2026-10-15", walk: "Sur les pas d’Hector Guimard" },
+  { date: "2026-11-26", walk: "Le Paris de Molière" },
+  { date: "2027-01-28", walk: "Les passages couverts" },
+  { date: "2027-02-25", walk: "Le quartier et l’église Saint-Séverin" },
+  { date: "2027-03-18", walk: "Le parc Monceau et ses hôtels particuliers" },
+  { date: "2027-04-29", walk: "La butte aux Cailles" },
+  { date: "2027-05-27", walk: "Le quartier de la Nouvelle Athènes" },
+  { date: "2027-06-24", walk: "La muraille de Philippe Auguste" },
+]);
+
+// Programme des balades familles : certains mercredis de la saison 2026-2027.
+const FAMILY_SLOT = "10 h 30–11 h 45";
+const FAMILY_SESSIONS = Object.freeze([
+  { walk: "Le square du Maréchal Leclerc", dates: ["2026-09-23", "2027-01-06", "2027-03-24", "2027-06-09"] },
+  { walk: "Le parc de Voyer d’Argenson", dates: ["2026-09-30", "2027-01-13", "2027-03-31", "2027-06-16"] },
+  { walk: "Le square du Maréchal Joffre", dates: ["2026-10-07", "2027-01-20", "2027-04-21", "2027-06-23"] },
+  { walk: "Le square Sylvain", dates: ["2026-10-14", "2027-01-27", "2027-04-28", "2027-06-30"] },
+  { walk: "Le square Maréchal de Lattre de Tassigny", dates: ["2026-11-04", "2027-02-03", "2027-05-05"] },
+  { walk: "Le parc Robinson", dates: ["2026-11-18", "2027-02-24", "2027-05-12"] },
+  { walk: "La mairie d’Asnières", dates: ["2026-11-24", "2027-03-03", "2027-05-19"] },
+  { walk: "Le cimetière ancien, un lieu de mémoire", dates: ["2026-12-02", "2027-03-10", "2027-05-26"] },
+  { walk: "Le cimetière des chiens, un lieu pour nos amis les bêtes", dates: ["2026-12-09", "2027-03-17", "2027-06-02"] },
+]);
+
+/** Balades familles avec leurs dates encore à venir. */
+function upcomingFamilySessions(now = Date.now()) {
+  return FAMILY_SESSIONS
+    .map(({ walk, dates }) => ({
+      walk,
+      dates: dates.filter((date) => !sessionIsHidden(date, FAMILY_SLOT, now)).sort(),
+    }))
+    .filter((entree) => entree.dates.length > 0);
+}
+
+// Carrousel dédié Familles : une carte par balade, avec ses dates à venir.
+function populateFamilyCards(track, prevBtn, nextBtn) {
+  if (!track) return;
+  track.replaceChildren();
+  const balades = upcomingFamilySessions();
+  if (!balades.length) {
+    const vide = document.createElement("li");
+    vide.className = "next-card family-card";
+    vide.innerHTML = '<div class="next-card-body"><p class="next-card-summary">Le programme de la saison prochaine sera annoncé ici.</p></div>';
+    track.append(vide);
+  }
+  balades.forEach(({ walk, dates }) => {
+    const pills = dates.map((date) => {
+      return `
+        <a class="next-card-date-pill" href="contact.html" data-interest="${escapeHtml(FAMILY_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(FAMILY_SLOT)}" aria-label="Réserver la balade familles du ${escapeHtml(formatFrenchDate(date))}">
+          ${dateChipHtml(date)}
+          <span class="next-card-places" data-offer-places>${capacityForKind("familles")} places</span>
+        </a>`;
+    }).join("");
+    const li = document.createElement("li");
+    li.className = "next-card family-card";
+    li.innerHTML = `
+      <div class="next-card-body">
+        <span class="next-card-kind">Balade familles · 1 h 15</span>
+        <h3 class="next-card-title">${escapeHtml(walk)}</h3>
+        <p class="next-card-summary">Une balade contée et interactive, avec des énigmes pour petits et grands.</p>
+        <p class="next-card-time"><span class="next-card-time-label">Horaires</span> <strong>${escapeHtml(formatSlot(FAMILY_SLOT))}</strong></p>
+        <div class="next-card-dates" aria-label="Dates des balades familles">${pills}</div>
+      </div>`;
+    track.append(li);
+  });
+  setupInspirationCarousel(track, prevBtn, nextBtn);
+  syncOfferPlaces();
+}
+
+// Certaines balades seniors sont les mêmes que celles du week-end : on réutilise
+// alors leur photo, leur thème et leur résumé pour des cartes identiques.
+const SENIOR_WALK_ALIASES = Object.freeze({
+  "La muraille de Philippe Auguste": "Sur les traces de l’enceinte de Philippe Auguste",
+});
+
+function publicWalkInfos(walk) {
+  const cible = SENIOR_WALK_ALIASES[walk] || walk;
+  const carte = programCards.find((item) => (item.dataset.walk || "") === cible);
+  if (!carte) return null;
+  return {
+    walk: carte.dataset.walk || cible,
+    image: carte.dataset.image || "",
+    imageAlt: carte.dataset.imageAlt || cible,
+    summary: carte.dataset.summary || "",
+    kind: carte.querySelector(".program-kind")?.textContent?.trim() || "",
+  };
+}
+
+/** Photo d’une balade, avec sa variante WebP, comme dans le carrousel tout public. */
+function walkMediaHtml(image, imageAlt, badge, periode) {
+  const imageStem = image.split("/").pop().replace(/\.jpg$/i, "");
+  const [width, height] = WALK_IMAGE_SIZES[imageStem] || [800, 500];
+  const imageWebp = imageStem
+    ? `<source type="image/webp" sizes="(max-width: 560px) 86vw, (max-width: 980px) 45vw, 380px" srcset="assets/responsive/${escapeHtml(imageStem)}-400.webp 400w, assets/responsive/${escapeHtml(imageStem)}-480.webp 480w, assets/responsive/${escapeHtml(imageStem)}-800.webp 800w">`
+    : "";
+  return `
+      <div class="next-card-media">
+        <picture>${imageWebp}<img class="next-card-image" src="${escapeHtml(image)}" width="${width}" height="${height}" alt="${escapeHtml(imageAlt)}" loading="lazy" decoding="async"></picture>
+        <span class="next-card-badge">${escapeHtml(badge)}</span>
+        <span class="next-card-period">${escapeHtml(periode)}</span>
+      </div>`;
+}
+
+/** Séances seniors encore à venir, dans l’ordre chronologique. */
+function upcomingSeniorSessions(now = Date.now()) {
+  return SENIOR_SESSIONS
+    .filter((session) => !sessionIsHidden(session.date, SENIOR_SLOT, now))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Carrousel dédié Seniors : une carte par date encore à venir.
+function populateSeniorCards(track, prevBtn, nextBtn) {
+  if (!track) return;
+  track.replaceChildren();
+  const sessions = upcomingSeniorSessions();
+  if (!sessions.length) {
+    const vide = document.createElement("li");
+    vide.className = "next-card senior-card";
+    vide.innerHTML = '<div class="next-card-body"><p class="next-card-summary">Le programme de la saison prochaine sera annoncé ici.</p></div>';
+    track.append(vide);
+  }
+  sessions.forEach((session, index) => {
+    const date = new Date(`${session.date}T12:00:00Z`);
+    const periode = new Intl.DateTimeFormat("fr-FR", {
+      day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+    }).format(date);
+    const infos = publicWalkInfos(session.walk);
+    const numero = String(index + 1).padStart(2, "0");
+    const mediaHtml = infos?.image ? walkMediaHtml(infos.image, infos.imageAlt, numero, periode) : "";
+    const kind = infos?.kind || "Balade seniors · 1 h 15";
+    const resume = infos?.summary || "Au rythme paisible, avec des étapes de repos.";
+    const li = document.createElement("li");
+    li.className = "next-card senior-card";
+    li.dataset.seniorDate = session.date;
+    if (infos) li.dataset.walk = session.walk;
+    li.innerHTML = `${mediaHtml}
+      <div class="next-card-body">
+        <span class="next-card-kind">${escapeHtml(kind)}</span>
+        <h3 class="next-card-title">${escapeHtml(session.walk)}</h3>
+        <p class="next-card-summary">${escapeHtml(resume)}</p>
+        <p class="next-card-time"><span class="next-card-time-label">Horaires</span> <strong>${escapeHtml(formatSlot(SENIOR_SLOT))}</strong></p>
+        <div class="next-card-dates" aria-label="Date de la balade seniors">
+          <a class="next-card-date-pill" href="contact.html" data-interest="${escapeHtml(SENIOR_TOPIC)}" data-walk="${escapeHtml(session.walk)}" data-date="${escapeHtml(session.date)}" data-slot="${escapeHtml(SENIOR_SLOT)}" aria-label="Réserver la balade seniors du ${escapeHtml(formatFrenchDate(session.date))}">
+            ${dateChipHtml(session.date)}
+            <span class="next-card-places" data-offer-places>${capacityForKind("seniors")} places</span>
+          </a>
+        </div>
+      </div>`;
+    track.append(li);
+  });
+  setupInspirationCarousel(track, prevBtn, nextBtn);
+  syncOfferPlaces();
+}
+
 // Une carte par balade à venir, dans l’ordre chronologique, avec sa photo et son résumé.
 function buildInspirationTrack() {
   inspirationCards.length = 0;
@@ -586,21 +1135,21 @@ function buildInspirationTrack() {
     populateCardsToTrack(inspirationTrack, inspirationPrevButton, inspirationNextButton, baladesAVenir, PUBLIC_TOPIC);
   }
 
-  // 2. Carrousel dédié Seniors (cases vides en attente de la sélection des balades et dates)
+  // 2. Carrousel dédié Seniors : les dates de la saison encore à venir.
   if (seniorsTrack) {
-    populatePlaceholderCards(seniorsTrack, seniorsPrevButton, seniorsNextButton, "Seniors", 4);
+    populateSeniorCards(seniorsTrack, seniorsPrevButton, seniorsNextButton);
   }
 
-  // 3. Carrousel dédié Familles (cases vides en attente de la sélection des balades et dates)
+  // 3. Carrousel dédié Familles : les dates de la saison encore à venir.
   if (famillesTrack) {
-    populatePlaceholderCards(famillesTrack, famillesPrevButton, famillesNextButton, "Familles", 4);
+    populateFamilyCards(famillesTrack, famillesPrevButton, famillesNextButton);
   }
 
   syncInspirationTrack();
 }
 
 // Génère des cartes d’emplacement vides pour les catégories en cours de création
-function populatePlaceholderCards(track, prevBtn, nextBtn, categoryLabel, count = 4) {
+function populatePlaceholderCards(track, prevBtn, nextBtn, categoryLabel, count = 4, duree = "1 h 15") {
   if (!track) return;
   track.replaceChildren();
 
@@ -622,7 +1171,7 @@ function populatePlaceholderCards(track, prevBtn, nextBtn, categoryLabel, count 
         <p class="next-card-summary">Le parcours, le thème et les créneaux pour les ${escapeHtml(categoryLabel.toLowerCase())} sont en cours de création par Marie-Tiyi.</p>
         <div class="next-card-dates placeholder-dates">
           <span class="placeholder-pill"><span aria-hidden="true">📅</span> Date à définir</span>
-          <span class="placeholder-pill"><span aria-hidden="true">🕒</span> Horaire à définir</span>
+          <span class="placeholder-pill"><span aria-hidden="true">🕒</span> Durée : ${escapeHtml(duree)}</span>
         </div>
       </div>
     `;
@@ -633,16 +1182,42 @@ function populatePlaceholderCards(track, prevBtn, nextBtn, categoryLabel, count 
 }
 
 // Les places restantes suivent celles du programme.
+// Places affichées sur les dates seniors et familles : les disponibilités quand
+// la séance est ouverte à la réservation, sinon la capacité du programme
+// (25 places tout public, 20 pour les seniors et les familles).
+function syncOfferPlaces() {
+  document.querySelectorAll("[data-offer-places]").forEach((cible) => {
+    const pillule = cible.closest("[data-date]");
+    const date = pillule?.dataset.date || "";
+    const walk = pillule?.dataset.walk || "";
+    const slot = pillule?.dataset.slot || "";
+    const session = availabilitySessions.find(
+      (item) => item.date === date && item.walk === walk && (!slot || item.slot === slot),
+    );
+    if (session) {
+      cible.textContent = session.remaining > 0
+        ? `${session.remaining} place${session.remaining > 1 ? "s" : ""}`
+        : "Indisponible";
+      cible.dataset.soldOut = session.remaining > 0 ? "" : "true";
+    } else {
+      const kind = TOPIC_KINDS[pillule?.dataset.interest] || "public";
+      cible.textContent = `${capacityForKind(kind)} places`;
+      cible.dataset.soldOut = "";
+    }
+  });
+}
+
 function syncInspirationTrack() {
   inspirationCards.forEach(({ carte, couplesDates }) => {
     couplesDates.forEach(({ lien, pilule }) => {
       if (!pilule) return;
       const source = lien.querySelector("[data-availability-label]");
       const cible = pilule.querySelector("[data-next-places]");
-      if (source && cible) cible.textContent = source.textContent;
+      const complet = lien.dataset.soldOut === "true";
+      // Une date sans place s'annonce « Indisponible » : le clic n'ouvrira rien.
+      if (cible) cible.textContent = complet ? "Indisponible" : source?.textContent || cible.textContent;
       const details = pilule.querySelector("[data-next-details]");
       if (details && source) details.textContent = source.textContent;
-      const complet = lien.dataset.soldOut === "true";
       pilule.classList.toggle("is-sold-out", complet);
       pilule.dataset.soldOut = complet ? "true" : "";
       pilule.setAttribute("aria-disabled", String(complet));
@@ -657,8 +1232,37 @@ function syncInspirationTrack() {
 
 buildInspirationTrack();
 
+function bookingKind(topic = bookingLock.interest || topicSelect?.value || "") {
+  return TOPIC_KINDS[topic] || "public";
+}
+
+function sessionKind(session) {
+  return session?.kind || "public";
+}
+
+/** Places d’un programme : 25 tout public, 20 seniors et familles. */
+function capacityForKind(kind) {
+  return KIND_CAPACITY[kind] || MAX_CAPACITY;
+}
+
+/** Places d’une séance : celles publiées par l’API, sinon celles de son programme. */
+function limitForSession(session) {
+  const value = Number(session?.capacity);
+  return Number.isInteger(value) && value >= 1 ? value : capacityForKind(sessionKind(session));
+}
+
+/** Limite à afficher : la séance choisie, sinon le programme en cours. */
+function currentBookingLimit(session = getSelectedSession()) {
+  return session ? limitForSession(session) : capacityForKind(bookingKind());
+}
+
 function isPublicBooking() {
-  return topicSelect?.value === PUBLIC_TOPIC;
+  return PROGRAMME_TOPICS.includes(topicSelect?.value || "");
+}
+
+/** Nombre maximum de personnes pour une demande sur mesure. */
+function customCapacityForTopic(topic) {
+  return SMALL_GROUP_TOPICS.includes(topic) ? GROUP_CAPACITY : CUSTOM_CAPACITY;
 }
 
 function updateBookingMode() {
@@ -673,17 +1277,26 @@ function updateBookingMode() {
   if (participantsInput) {
     participantsInput.disabled = !publicMode;
     participantsInput.required = false;
-    participantsInput.max = String(MAX_CAPACITY);
+    participantsInput.max = String(currentBookingLimit());
   }
   if (ageGroupsFieldset) ageGroupsFieldset.hidden = !publicMode;
   ageGroupInputs.forEach((input) => {
     input.disabled = !publicMode;
-    input.max = String(MAX_CAPACITY);
+    input.max = String(currentBookingLimit());
   });
+  const customLimit = customCapacityForTopic(topicSelect?.value || "");
   if (customParticipantsInput) {
     customParticipantsInput.disabled = publicMode;
-    customParticipantsInput.max = "100";
+    customParticipantsInput.max = String(customLimit);
+    if (Number(customParticipantsInput.value) > customLimit) customParticipantsInput.value = String(customLimit);
   }
+  if (customCapacityNote) {
+    customCapacityNote.hidden = publicMode;
+    customCapacityNote.textContent = customLimit === GROUP_CAPACITY
+      ? "Indiquez le nombre de personnes : 20 personnes maximum pour un groupe de seniors ou une famille."
+      : "Indiquez le nombre de personnes estimé pour votre groupe.";
+  }
+  syncBookingLockUi();
   if (submitButton) {
     const label = publicMode ? "Réserver ma place" : "Envoyer ma demande";
     const arrow = submitButton.querySelector(".arrow");
@@ -696,6 +1309,8 @@ function updateBookingMode() {
 if (topicSelect) topicSelect.addEventListener("change", () => {
   updateFormStatus("");
   updateBookingMode();
+  // Changer de programme change les dates proposées : tout public, seniors ou familles.
+  if (availabilityLoaded && isPublicBooking()) renderSessionOptions();
 });
 
 function makeSessionId(date, walk, slot) {
@@ -719,7 +1334,7 @@ function readAgeGroups() {
   let valid = true;
   ageGroupInputs.forEach((input) => {
     const value = input.value === "" ? 0 : Number(input.value);
-    if (!Number.isInteger(value) || value < 0 || value > MAX_CAPACITY) valid = false;
+    if (!Number.isInteger(value) || value < 0 || value > CUSTOM_CAPACITY) valid = false;
     ageGroups[input.dataset.ageGroup] = value;
   });
   return { ageGroups, valid };
@@ -826,7 +1441,8 @@ function updateAgeEstimate() {
   if (participantsTotalOutput) participantsTotalOutput.textContent = String(total);
   if (bookingEstimateOutput) bookingEstimateOutput.textContent = total > 0 ? `${amount} €` : "—";
   const selected = sessionsById.get(sessionSelect?.value || "");
-  const maxForSession = selected ? Math.min(MAX_CAPACITY, selected.remaining) : MAX_CAPACITY;
+  const limit = currentBookingLimit(selected);
+  const maxForSession = selected ? Math.min(limit, selected.remaining) : limit;
   ageGroupInputs.forEach((input) => { input.max = String(maxForSession); });
   if (!ageGroupStatus) return;
   if (total === 0 && !ageGroupsTouched) {
@@ -834,13 +1450,13 @@ function updateAgeEstimate() {
     ageGroupStatus.textContent = "Renseignez votre groupe pour afficher le total et l’estimation.";
     return;
   }
-  ageGroupStatus.classList.toggle("is-error", !valid || total < 1 || total > MAX_CAPACITY || (selected && total > selected.remaining));
+  ageGroupStatus.classList.toggle("is-error", !valid || total < 1 || total > limit || (selected && total > selected.remaining));
   if (!valid) {
     ageGroupStatus.textContent = "Saisissez un nombre entier supérieur ou égal à zéro dans chaque tranche.";
   } else if (total < 1) {
     ageGroupStatus.textContent = "Indiquez au moins une personne pour estimer le montant.";
-  } else if (total > MAX_CAPACITY) {
-    ageGroupStatus.textContent = `Une visite est limitée à ${MAX_CAPACITY} personnes au total.`;
+  } else if (total > limit) {
+    ageGroupStatus.textContent = `Une visite est limitée à ${limit} personnes au total.`;
   } else if (selected && total > selected.remaining) {
     ageGroupStatus.textContent = `Il ne reste que ${selected.remaining} place${selected.remaining > 1 ? "s" : ""} pour cette date.`;
   } else {
@@ -928,10 +1544,11 @@ if (clearProgramFiltersButton) {
   });
 }
 
-function findSessionForTarget(target) {
+function findSessionForTarget(target, kind = bookingKind()) {
   if (!target?.walk) return null;
   const matches = availabilitySessions.filter((session) => {
     if (session.ended) return false;
+    if (sessionKind(session) !== kind) return false;
     if (session.walk !== target.walk) return false;
     if (target.date && session.date !== target.date) return false;
     if (target.slot && session.slot !== target.slot) return false;
@@ -964,6 +1581,9 @@ function updateSessionStatus() {
     return;
   }
   sessionStatus.textContent = `Pour « ${session.walk} », le ${formatFrenchDate(session.date)} (${session.slot}), il reste ${pluralPlaces(session.remaining)} sur ${session.capacity}. Vous pouvez réserver jusqu’à ${session.remaining} personne${session.remaining > 1 ? "s" : ""}.`;
+  if (bookingLock.walk && bookingLock.date) {
+    sessionStatus.textContent += " Cette balade et cette date sont déjà choisies : indiquez seulement le nombre de personnes.";
+  }
   updateAgeEstimate();
 }
 
@@ -971,12 +1591,20 @@ function renderSessionOptions(preferredId = "") {
   if (!sessionSelect) return;
   const previousId = preferredId || sessionSelect.value;
   sessionSelect.replaceChildren();
+  // Un seul programme, et une seule balade quand elle est figée : seules ses
+  // propres dates restent proposées.
+  const kind = bookingKind();
+  const sessionsProposees = availabilitySessions.filter(
+    (session) => sessionKind(session) === kind && (!bookingLock.walk || session.walk === bookingLock.walk),
+  );
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = availabilitySessions.length ? "Choisissez une balade" : "Aucune date pour le moment";
+  placeholder.textContent = sessionsProposees.length
+    ? (bookingLock.walk ? "Choisissez une date" : "Choisissez une balade")
+    : "Aucune date pour le moment";
   sessionSelect.append(placeholder);
 
-  availabilitySessions.forEach((session) => {
+  sessionsProposees.forEach((session) => {
     if (session.ended) return; // une balade terminée n’est plus proposée à la réservation
     const option = document.createElement("option");
     option.value = session.id;
@@ -998,7 +1626,10 @@ function renderSessionOptions(preferredId = "") {
       pendingSessionTarget = null;
       window.setTimeout(() => sessionSelect.focus({ preventScroll: true }), 0);
     } else if (availabilityLoaded && pendingSessionTarget.date) {
-      const scheduled = availabilitySessions.some((session) => session.date === pendingSessionTarget.date && session.walk === pendingSessionTarget.walk);
+      const scheduled = availabilitySessions.some(
+        (session) => sessionKind(session) === bookingKind()
+          && session.date === pendingSessionTarget.date && session.walk === pendingSessionTarget.walk,
+      );
       if (scheduled) {
         sessionStatus.textContent = "Cette date est complète. Choisissez une autre date disponible.";
         pendingSessionTarget = null;
@@ -1079,6 +1710,7 @@ function renderAvailability(payload) {
   availabilityError = false;
   updateProgramAvailability();
   renderSessionOptions();
+  syncOfferPlaces();
 }
 
 // ------------------------------------------------------------------ Agenda Google
@@ -1177,13 +1809,43 @@ function applyAgendaSessions(sessions) {
   return true;
 }
 
+/** Adresse d’une route de lecture de l’API (serveur local ou Web App). */
+function readApiUrl(base, name) {
+  return base ? `${base}?api=${name}` : `/api/${name}`;
+}
+
+/**
+ * Lit une route de l’API. En aperçu, si le serveur Python n’est pas joignable
+ * ( route absente ou réseau), on bascule une fois pour toutes sur la Web App.
+ */
+async function readApi(name) {
+  const bases = [activeApiBase, ...API_BASES.filter((base) => base !== activeApiBase)];
+  let lastError = null;
+  for (let index = 0; index < bases.length; index += 1) {
+    const base = bases[index];
+    try {
+      const response = await fetch(readApiUrl(base, name), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      // Route absente ou page HTML renvoyée à la place du JSON : on essaie l’autre API.
+      const type = response.headers?.get?.("content-type") || "";
+      const json = !type || type.includes("json");
+      if (index < bases.length - 1 && (!json || [404, 405, 501].includes(response.status))) continue;
+      activeApiBase = base;
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (index === bases.length - 1) throw error;
+    }
+  }
+  throw lastError || new Error("API indisponible");
+}
+
 /** Lit les dates de l’agenda (facultatif : le site fonctionne sans). */
 async function loadAgendaSchedule() {
   try {
-    const response = await fetch(ACTIVE_API_URL ? `${ACTIVE_API_URL}?api=schedule` : "/api/schedule", {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
+    const response = await readApi("schedule");
     if (!response.ok) return;
     const payload = await response.json();
     if (!payload || payload.agenda !== true || !Array.isArray(payload.sessions)) return;
@@ -1198,7 +1860,7 @@ async function loadAvailability() {
   if (availabilityRequest) return availabilityRequest;
   availabilityRequest = (async () => {
     try {
-      const response = await fetch(ACTIVE_API_URL ? `${ACTIVE_API_URL}?api=availability` : "/api/availability", { cache: "no-store", headers: { Accept: "application/json" } });
+      const response = await readApi("availability");
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
       // Apps Script répond toujours 200 : une erreur arrive dans le corps de la réponse.
@@ -1261,46 +1923,6 @@ if (messageInput) {
   });
 }
 
-// Les liens du programme remplissent automatiquement la séance; les liens sur mesure gardent le parcours e-mail.
-document.querySelectorAll("[data-interest]").forEach((link) => {
-  link.addEventListener("click", (event) => {
-    if (link.dataset.soldOut === "true" || link.dataset.allSoldOut === "true") {
-      event.preventDefault();
-      updateFormStatus("Cette visite est complète. Choisissez une autre date pour réserver.", "error");
-      return;
-    }
-    updateFormStatus("");
-    if (topicSelect) {
-      topicSelect.value = link.dataset.interest;
-      updateBookingMode();
-    }
-
-    const programCard = link.closest("[data-program-card]");
-    const walkName = link.dataset.walk || programCard?.dataset.walk;
-    if (!walkName) return;
-
-    if (messageInput && (!messageInput.value.trim() || messageInput.dataset.prefilled === "true")) {
-      messageInput.value = `Balade souhaitée : ${walkName}`;
-      messageInput.dataset.prefilled = "true";
-    }
-
-    if (link.dataset.interest === PUBLIC_TOPIC) {
-      const selectedDate = link.dataset.date || link.dataset.programDate || "";
-      const slot = link.dataset.slot || programCard?.dataset.slot || "";
-      chooseSession({ date: selectedDate, walk: walkName, slot });
-    } else {
-      const selectedDate = link.dataset.date || link.dataset.programDate || "";
-      if (dateInput && selectedDate) dateInput.value = selectedDate;
-      if (slotSelect) slotSelect.value = link.dataset.slot || programCard?.dataset.slot || "À convenir";
-    }
-
-    window.setTimeout(() => {
-      const nextField = link.dataset.interest === PUBLIC_TOPIC ? sessionSelect : dateInput;
-      nextField?.focus({ preventScroll: true });
-    }, 0);
-  });
-});
-
 function getSelectedSession() {
   return sessionsById.get(sessionSelect?.value || "") || null;
 }
@@ -1310,6 +1932,10 @@ function updateFormStatus(message, state = "info") {
   formStatus.textContent = message;
   if (message) formStatus.dataset.state = state;
   else delete formStatus.dataset.state;
+  // Confirmation ou erreur : on amène le message dans la fenêtre de réservation.
+  if (message && bookingDialog?.open) {
+    formStatus.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 // Un champ rempli uniquement d'espaces ne compte pas comme une saisie.
@@ -1349,8 +1975,9 @@ async function submitPublicBooking(values) {
     sessionSelect?.focus();
     return;
   }
-  if (!ageGroupsValid || participants < 1 || participants > MAX_CAPACITY) {
-    updateFormStatus(`Répartissez les participants par tarif; une visite est limitée à ${MAX_CAPACITY} personnes au total.`, "error");
+  const limit = currentBookingLimit(session);
+  if (!ageGroupsValid || participants < 1 || participants > limit) {
+    updateFormStatus(`Répartissez les participants par tarif; une visite est limitée à ${limit} personnes au total.`, "error");
     ageGroupInputs.find((input) => !input.validity.valid)?.focus();
     return;
   }
@@ -1394,9 +2021,9 @@ async function submitPublicBooking(values) {
   updateFormStatus("Enregistrement de votre réservation…", "pending");
   try {
     // Apps Script : text/plain évite le pré-vol CORS ; la réponse reste lisible en JSON.
-    const response = await fetch(ACTIVE_API_URL || "/api/bookings", {
+    const response = await fetch(activeApiBase || "/api/bookings", {
       method: "POST",
-      headers: ACTIVE_API_URL
+      headers: activeApiBase
         ? { "Content-Type": "text/plain;charset=utf-8" }
         : { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
@@ -1465,8 +2092,14 @@ async function submitCustomRequest(values) {
     phoneInput?.focus();
     return;
   }
-  if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > 100)) {
-    updateFormStatus("Indiquez un nombre de personnes compris entre 1 et 100.", "error");
+  const customLimit = customCapacityForTopic(topic);
+  if (participants && (!/^\d+$/.test(participants) || Number(participants) < 1 || Number(participants) > customLimit)) {
+    updateFormStatus(
+      customLimit === GROUP_CAPACITY
+        ? "Un groupe de seniors ou une visite en famille est limité à 20 personnes."
+        : "Indiquez un nombre de personnes compris entre 1 et 100.",
+      "error"
+    );
     customParticipantsInput?.focus();
     return;
   }
@@ -1476,9 +2109,9 @@ async function submitCustomRequest(values) {
   hideCalendarLink();
   updateFormStatus("Envoi de votre demande…", "pending");
   try {
-    const response = await fetch(ACTIVE_API_URL || "/api/bookings", {
+    const response = await fetch(activeApiBase || "/api/bookings", {
       method: "POST",
-      headers: ACTIVE_API_URL
+      headers: activeApiBase
         ? { "Content-Type": "text/plain;charset=utf-8" }
         : { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
@@ -1518,6 +2151,7 @@ async function submitCustomRequest(values) {
 if (contactForm && formStatus) {
   contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (lockedTopicInput) lockedTopicInput.value = topicSelect?.value || "";
     if (isPublicBooking()) {
       await submitPublicBooking(new FormData(contactForm));
       return;
@@ -1529,14 +2163,19 @@ if (contactForm && formStatus) {
 
 applyProgramFilters();
 updateBookingMode();
-loadAvailability();
-loadAgendaSchedule();
-// Google Apps Script : interrogé moins souvent pour rester dans les quotas gratuits.
-window.setInterval(loadAvailability, ACTIVE_API_URL ? 120_000 : 30_000);
-window.addEventListener("focus", loadAvailability);
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) loadAvailability();
-});
+openBookingFromUrl();
+// Les disponibilités ne sont utiles que là où l'on choisit une date.
+const needsAvailability = programCards.length > 0 || Boolean(contactForm);
+if (needsAvailability) {
+  loadAvailability();
+  loadAgendaSchedule();
+  // Google Apps Script : interrogé moins souvent pour rester dans les quotas gratuits.
+  window.setInterval(loadAvailability, IS_PUBLISHED_SITE ? 120_000 : 30_000);
+  window.addEventListener("focus", loadAvailability);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) loadAvailability();
+  });
+}
 
 const year = document.querySelector("[data-year]");
 if (year) year.textContent = String(new Date().getFullYear());
@@ -1644,32 +2283,24 @@ function renderWalkDialogDates(walkName) {
     const slot = lien.dataset.slot || programCard?.dataset.slot || "";
     const dateComplete = lien.dataset.fullDate || date;
     const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
-    const places = lien.querySelector("[data-availability-label]")?.textContent?.trim() || "Places disponibles";
     const complet = lien.dataset.soldOut === "true";
+    const places = complet
+      ? "Indisponible"
+      : lien.querySelector("[data-availability-label]")?.textContent?.trim() || "Places disponibles";
 
     const boutonDate = document.createElement("a");
     boutonDate.className = `walk-dialog-date-btn${complet ? " is-sold-out" : ""}`;
-    boutonDate.href = "#contact";
+    boutonDate.href = "contact.html";
     boutonDate.dataset.soldOut = complet ? "true" : "";
+    boutonDate.dataset.interest = PUBLIC_TOPIC;
+    boutonDate.dataset.walk = walkName;
+    boutonDate.dataset.date = date;
+    boutonDate.dataset.slot = slot;
     boutonDate.setAttribute("aria-disabled", String(complet));
-    boutonDate.innerHTML = `<span>Réserver le ${escapeHtml(weekday)} ${escapeHtml(dateComplete)}</span><small>${escapeHtml(places)}</small>`;
-    boutonDate.addEventListener("click", (event) => {
-      if (complet) {
-        event.preventDefault();
-        return;
-      }
-      closeWalkDialog();
-      updateFormStatus("");
-      if (topicSelect) {
-        topicSelect.value = PUBLIC_TOPIC;
-        updateBookingMode();
-      }
-      if (messageInput && (!messageInput.value.trim() || messageInput.dataset.prefilled === "true")) {
-        messageInput.value = `Balade souhaitée : ${walkName}`;
-        messageInput.dataset.prefilled = "true";
-      }
-      chooseSession({ date, walk: walkName, slot });
-    });
+    boutonDate.innerHTML = `<span>Réserver le ${escapeHtml(weekday)} ${escapeHtml(dateComplete)}</span><small>${escapeHtml(formatSlot(slot))} · ${escapeHtml(places)}</small>`;
+    // Le clic est traité par le gestionnaire global : la fiche se referme et la
+    // fenêtre de réservation s'ouvre sur cette date (ou affiche « Indisponible »).
+    boutonDate.addEventListener("click", () => closeWalkDialog());
     walkDialogDates.append(boutonDate);
   });
 }
