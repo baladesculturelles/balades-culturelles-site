@@ -187,6 +187,35 @@ if (menuToggle && navigation) {
   });
 }
 
+// Sous-menu « Balades culturelles » au tactile sans survol (tablette et
+// téléphone en paysage, > 760 px) : le premier tap ouvre le sous-menu au
+// lieu de naviguer tout de suite vers balades.html — ses liens (Tout
+// public, Seniors, Familles…) étaient sinon inatteignables au doigt.
+// Le second tap suit le lien ; un tap ailleurs referme. Sur téléphone
+// portrait (≤ 760 px), le sous-menu est déjà déplié dans le panneau.
+if (navigation) {
+  const sousMenuSansSurvol = window.matchMedia("(min-width: 761px) and (hover: none)");
+  navigation.querySelectorAll(".nav-item-dropdown").forEach((item) => {
+    const toggle = item.querySelector(".nav-dropdown-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", (event) => {
+      if (!sousMenuSansSurvol.matches || item.classList.contains("is-subopen")) return;
+      event.preventDefault();
+      // Évite au clic « ouverture » de marquer l'onglet comme page en cours.
+      event.stopPropagation();
+      item.classList.add("is-subopen");
+      toggle.setAttribute("aria-expanded", "true");
+    });
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest(".nav-item-dropdown.is-subopen")) return;
+    navigation.querySelectorAll(".nav-item-dropdown.is-subopen").forEach((item) => {
+      item.classList.remove("is-subopen");
+      item.querySelector(".nav-dropdown-toggle")?.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
 // ------------------------------------------------------------------ Onglet actif
 // Chaque page du site a son onglet. Sur une page à sections (balades), le menu
 // suit en plus la rubrique en cours de lecture, sans modifier le défilement.

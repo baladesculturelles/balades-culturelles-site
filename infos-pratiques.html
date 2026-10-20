@@ -23,7 +23,7 @@
     <meta name="twitter:image:alt" content="Balades Culturelles — une rue de Paris bordée de façades anciennes, avec le titre du site.">
     <title>Infos pratiques — Balades Culturelles</title>
     <link rel="icon" href="assets/responsive/logo-96.png" sizes="96x96" type="image/png">
-    <link rel="apple-touch-icon" href="assets/responsive/logo-96.png">
+    <link rel="apple-touch-icon" href="assets/responsive/logo-180.png">
     <!-- Le formulaire envoie sa demande à Google Apps Script : ouvrir la connexion
          dès le chargement évite une résolution DNS et une poignée de main TLS
          au moment du clic sur « Envoyer ». Sans effet en aperçu local. -->
@@ -76,12 +76,12 @@
         <h1 id="page-title">Infos <em>pratiques.</em></h1>
         <p class="page-intro-lead">Tarifs, réservation, durée des balades et déroulement&nbsp;: tout ce qu’il faut savoir avant de partir en promenade, à Paris comme en Île-de-France.</p>
       </section>
-      <section class="practical section-space practical-compact" id="infos-pratiques" aria-labelledby="page-title">
+      <section class="practical section-space practical-compact" id="infos-pratiques" aria-label="Tarifs et déroulement des balades">
         <div class="section-shell">
           <div class="practical-grid">
             <article class="practical-card practical-price">
               <span class="practical-index">01 / TARIFS</span>
-              <h3>Balades culturelles</h3>
+              <h2>Balades culturelles</h2>
               <p>Tarif unique&nbsp;: le même prix pour toutes les balades du programme.</p>
               <ul class="price-list">
                 <li><span>Plein tarif (26 ans et +)</span><strong>15&nbsp;€</strong></li>
@@ -92,13 +92,13 @@
             </article>
             <article class="practical-card">
               <span class="practical-index">02 / SUR DEMANDE</span>
-              <h3>Groupes et balades spécifiques sur demande</h3>
+              <h2>Groupes et balades spécifiques sur demande</h2>
               <p>Groupes de seniors, sorties scolaires, familles, amis, associations ou entreprises&nbsp;: chaque visite sur demande s’adapte à votre public et au quartier souhaité.</p>
               <a href="contact.html" data-interest="Je souhaite organiser une sortie privée ou de groupe" data-walk="Une balade privée ou de groupe">Tarifs sur demande <span aria-hidden="true">↗</span></a>
             </article>
             <article class="practical-card">
               <span class="practical-index">03 / INSCRIPTION</span>
-              <h3>Avant le départ</h3>
+              <h2>Avant le départ</h2>
               <p>Règlement par virement bancaire, Wero ou espèces.</p>
             </article>
           </div>
@@ -174,7 +174,7 @@
                 <div class="form-row form-row-booking custom-booking-fields" id="custom-booking-fields" hidden>
                   <label for="date">Date souhaitée <span class="optional">(facultatif)</span><input id="date" name="date" type="date"></label>
                   <label for="slot">Créneau souhaité <span class="optional">(facultatif)</span><select id="slot" name="slot"><option>À convenir</option><option>10 h 30–12 h</option></select></label>
-                  <label for="custom-participants">Nombre de personnes estimé <span class="optional">(facultatif)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="100" step="1" placeholder="Ex. 12" aria-describedby="custom-capacity-note"></label>
+                  <label for="custom-participants">Nombre de personnes estimé <span class="optional">(facultatif)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="Ex. 12" aria-describedby="custom-capacity-note"></label>
                 </div>
                 <p class="booking-capacity-note custom-capacity-note" id="custom-capacity-note" role="status" aria-live="polite">Indiquez le nombre de personnes&nbsp;: 20 personnes maximum pour un groupe de seniors ou une famille.</p>
                 <p class="booking-capacity-note" id="session-status" role="status" aria-live="polite">Sélectionnez une balade et une date pour consulter les places disponibles.</p>
