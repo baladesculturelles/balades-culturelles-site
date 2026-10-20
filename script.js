@@ -409,9 +409,14 @@ function updateNextWalk() {
   const title = nextWalkBanner.querySelector("#next-walk-title");
   const dateOutput = nextWalkBanner.querySelector("[data-next-walk-date]");
   const placesOutput = nextWalkBanner.querySelector("[data-next-walk-places]");
+  const thumb = nextWalkBanner.querySelector("[data-next-walk-img]");
   if (title) title.textContent = walk;
   if (dateOutput) dateOutput.textContent = `${weekday} ${fullDate}`.trim();
   if (placesOutput) placesOutput.textContent = available ? places : "complet";
+  if (thumb && choice.card.dataset.image) {
+    thumb.src = choice.card.dataset.image;
+    thumb.alt = choice.card.dataset.imageAlt || walk;
+  }
   if (nextWalkCta) {
     nextWalkCta.dataset.walk = walk;
     nextWalkCta.dataset.date = date;
@@ -429,6 +434,12 @@ updateNextWalk();
 const inspirationTrack = document.querySelector("#inspiration-track");
 const inspirationPrevButton = document.querySelector("[data-inspiration-prev]");
 const inspirationNextButton = document.querySelector("[data-inspiration-next]");
+const seniorsTrack = document.querySelector("#seniors-track");
+const seniorsPrevButton = document.querySelector("[data-seniors-prev]");
+const seniorsNextButton = document.querySelector("[data-seniors-next]");
+const famillesTrack = document.querySelector("#familles-track");
+const famillesPrevButton = document.querySelector("[data-familles-prev]");
+const famillesNextButton = document.querySelector("[data-familles-next]");
 const inspirationCards = [];
 
 // Dimensions intrinsèques des photos du programme. Les attributs width/height
@@ -470,27 +481,11 @@ function formatWalkPeriod(liensDates) {
   return `${premier.jour} ${premier.mois} & ${dernier.jour} ${dernier.mois} ${dernier.annee}`.trim();
 }
 
-// Une carte par balade à venir, dans l’ordre chronologique, avec sa photo et son résumé.
-function buildInspirationTrack() {
-  if (!inspirationTrack) return;
-  const baladesAVenir = programCards
-    .map((card) => {
-      const liensDates = [...card.querySelectorAll("[data-program-date]")]
-        .filter((lien) => !lien.hidden)
-        .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
-      return {
-        card,
-        liensDates,
-        premiereDate: liensDates[0]?.dataset.programDate || "",
-      };
-    })
-    .filter((entree) => entree.liensDates.length > 0)
-    .sort((a, b) => a.premiereDate.localeCompare(b.premiereDate));
+function populateCardsToTrack(track, prevBtn, nextBtn, baladesList, defaultInterest) {
+  if (!track) return;
+  track.replaceChildren();
 
-  inspirationTrack.replaceChildren();
-  inspirationCards.length = 0;
-
-  baladesAVenir.forEach(({ card, liensDates }, index) => {
+  baladesList.forEach(({ card, liensDates }, index) => {
     const walk = card.dataset.walk || "";
     const slot = card.dataset.slot || "";
     const image = card.dataset.image || "";
@@ -516,7 +511,7 @@ function buildInspirationTrack() {
       const weekday = lien.querySelector(".program-date-weekday")?.textContent?.trim() || "";
       const mois = lien.querySelector(".program-date-month")?.textContent?.trim() || "";
       return `
-        <a class="next-card-date-pill" href="#contact" data-next-date-index="${idx}" data-interest="${escapeHtml(PUBLIC_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(slot)}">
+        <a class="next-card-date-pill" href="#contact" data-next-date-index="${idx}" data-interest="${escapeHtml(defaultInterest || PUBLIC_TOPIC)}" data-walk="${escapeHtml(walk)}" data-date="${escapeHtml(date)}" data-slot="${escapeHtml(slot)}">
           <span class="next-card-date-chip"><b>${escapeHtml(jour)}</b> ${escapeHtml(weekday)} ${escapeHtml(mois)}</span>
           <span class="next-card-places" data-next-places>Chargement…</span>
           <span class="visually-hidden" data-next-details>${escapeHtml(walk)} — ${escapeHtml(dateComplete)}</span>
@@ -538,12 +533,103 @@ function buildInspirationTrack() {
 
     const pilules = [...carte.querySelectorAll(".next-card-date-pill")];
     const couplesDates = liensDates.map((lien, idx) => ({ lien, pilule: pilules[idx] }));
-    inspirationTrack.append(carte);
+    track.append(carte);
     inspirationCards.push({ carte, couplesDates });
   });
 
+  const updateButtons = () => {
+    const max = track.scrollWidth - track.clientWidth - 2;
+    if (prevBtn) prevBtn.disabled = track.scrollLeft <= 2;
+    if (nextBtn) nextBtn.disabled = track.scrollLeft >= max;
+  };
+  const scroll = (dir) => {
+    const carte = track.querySelector(".next-card");
+    if (!carte) return;
+    const ecart = parseFloat(window.getComputedStyle(track).columnGap || "13") || 13;
+    const pas = carte.getBoundingClientRect().width + ecart;
+    track.scrollBy({ left: dir * pas, behavior: "smooth" });
+  };
+
+  if (prevBtn && !prevBtn._hasCarouselHandler) {
+    prevBtn._hasCarouselHandler = true;
+    prevBtn.addEventListener("click", () => scroll(-1));
+  }
+  if (nextBtn && !nextBtn._hasCarouselHandler) {
+    nextBtn._hasCarouselHandler = true;
+    nextBtn.addEventListener("click", () => scroll(1));
+  }
+  track.addEventListener("scroll", updateButtons, { passive: true });
+  window.addEventListener("resize", updateButtons);
+  updateButtons();
+}
+
+// Une carte par balade à venir, dans l’ordre chronologique, avec sa photo et son résumé.
+function buildInspirationTrack() {
+  inspirationCards.length = 0;
+
+  const baladesAVenir = programCards
+    .map((card) => {
+      const liensDates = [...card.querySelectorAll("[data-program-date]")]
+        .filter((lien) => !lien.hidden)
+        .sort((a, b) => (a.dataset.programDate || "").localeCompare(b.dataset.programDate || ""));
+      return {
+        card,
+        liensDates,
+        premiereDate: liensDates[0]?.dataset.programDate || "",
+      };
+    })
+    .filter((entree) => entree.liensDates.length > 0)
+    .sort((a, b) => a.premiereDate.localeCompare(b.premiereDate));
+
+  // 1. Carrousel principal Tout public (week-ends)
+  if (inspirationTrack) {
+    populateCardsToTrack(inspirationTrack, inspirationPrevButton, inspirationNextButton, baladesAVenir, PUBLIC_TOPIC);
+  }
+
+  // 2. Carrousel dédié Seniors (cases vides en attente de la sélection des balades et dates)
+  if (seniorsTrack) {
+    populatePlaceholderCards(seniorsTrack, seniorsPrevButton, seniorsNextButton, "Seniors", 4);
+  }
+
+  // 3. Carrousel dédié Familles (cases vides en attente de la sélection des balades et dates)
+  if (famillesTrack) {
+    populatePlaceholderCards(famillesTrack, famillesPrevButton, famillesNextButton, "Familles", 4);
+  }
+
   syncInspirationTrack();
-  updateInspirationButtons();
+}
+
+// Génère des cartes d’emplacement vides pour les catégories en cours de création
+function populatePlaceholderCards(track, prevBtn, nextBtn, categoryLabel, count = 4) {
+  if (!track) return;
+  track.replaceChildren();
+
+  for (let i = 1; i <= count; i++) {
+    const num = String(i).padStart(2, "0");
+    const li = document.createElement("li");
+    li.className = "next-card placeholder-card";
+    li.setAttribute("aria-label", `Emplacement ${num} · Balade ${categoryLabel} en cours de création`);
+    li.innerHTML = `
+      <div class="placeholder-card-media">
+        <div class="placeholder-media-inner">
+          <span class="placeholder-card-number">${num}</span>
+          <span class="placeholder-card-badge">En cours de création</span>
+        </div>
+      </div>
+      <div class="next-card-body placeholder-card-body">
+        <p class="next-card-kind">En cours de création</p>
+        <h3 class="next-card-title">Case libre · ${escapeHtml(categoryLabel)}</h3>
+        <p class="next-card-summary">Le parcours, le thème et les créneaux pour les ${escapeHtml(categoryLabel.toLowerCase())} sont en cours de création par Marie-Tiyi.</p>
+        <div class="next-card-dates placeholder-dates">
+          <span class="placeholder-pill"><span aria-hidden="true">📅</span> Date à définir</span>
+          <span class="placeholder-pill"><span aria-hidden="true">🕒</span> Horaire à définir</span>
+        </div>
+      </div>
+    `;
+    track.appendChild(li);
+  }
+
+  setupInspirationCarousel(track, prevBtn, nextBtn);
 }
 
 // Les places restantes suivent celles du programme.
@@ -569,27 +655,7 @@ function syncInspirationTrack() {
   }
 }
 
-function updateInspirationButtons() {
-  if (!inspirationTrack) return;
-  const max = inspirationTrack.scrollWidth - inspirationTrack.clientWidth - 2;
-  if (inspirationPrevButton) inspirationPrevButton.disabled = inspirationTrack.scrollLeft <= 2;
-  if (inspirationNextButton) inspirationNextButton.disabled = inspirationTrack.scrollLeft >= max;
-}
-
-function scrollInspiration(direction) {
-  if (!inspirationTrack) return;
-  const carte = inspirationTrack.querySelector(".next-card");
-  if (!carte) return;
-  const ecart = parseFloat(window.getComputedStyle(inspirationTrack).columnGap || "13") || 13;
-  const pas = carte.getBoundingClientRect().width + ecart;
-  inspirationTrack.scrollBy({ left: direction * pas, behavior: "smooth" });
-}
-
 buildInspirationTrack();
-if (inspirationPrevButton) inspirationPrevButton.addEventListener("click", () => scrollInspiration(-1));
-if (inspirationNextButton) inspirationNextButton.addEventListener("click", () => scrollInspiration(1));
-if (inspirationTrack) inspirationTrack.addEventListener("scroll", updateInspirationButtons, { passive: true });
-window.addEventListener("resize", updateInspirationButtons);
 
 function isPublicBooking() {
   return topicSelect?.value === PUBLIC_TOPIC;
