@@ -418,7 +418,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .inspiration-nav-button:disabled { opacity: .28; cursor: default; }
 .inspiration-track { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 26px) / 3); gap: 13px; margin: 0 0 13px; padding: 0 0 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; list-style: none; }
 .inspiration-track::-webkit-scrollbar { display: none; }
-.next-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,253,248,.19); background: rgba(255,253,248,.045); scroll-snap-align: start; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+/* `position: relative` n’est pas décoratif : sans lui, les éléments en
+   `position: absolute` des cartes (les repères `.visually-hidden`, les pastilles
+   de dates) n’ont aucun ancêtre positionné à l’intérieur du carrousel. Leur bloc
+   conteneur devient alors le bloc initial : ils échappent au défilement
+   horizontal de `.inspiration-track` et étirent le document à la largeur de
+   TOUTES les cartes (3 385 px mesurés à 393 px de large, sur Balades
+   uniquement). Les navigateurs mobiles qui savent dézoomer pour « ajuster à
+   l’écran » (Samsung Internet, Chrome en mode bureau, etc.) s’autorisent alors
+   un zoom arrière de 25 à 30 % : la page entière s’affiche en miniature dans un
+   coin de l’écran, et la fenêtre de réservation avec elle. */
+.next-card { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,253,248,.19); background: rgba(255,253,248,.045); scroll-snap-align: start; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
 .next-card:hover { border-color: rgba(216,178,110,.7); background: rgba(255,253,248,.075); }
 .next-card-media { position: relative; display: block; overflow: hidden; aspect-ratio: 1.12; background: #143226; }
 .next-card-image { width: 100%; height: 100%; object-fit: cover; object-position: center 42%; transition: transform .7s cubic-bezier(.2,.65,.25,1); }
