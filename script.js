@@ -47,6 +47,16 @@ const IS_PUBLISHED_SITE = PUBLISHED_HOSTS.includes(window.location.hostname);
 const API_BASES = IS_PUBLISHED_SITE ? [BOOKING_API_URL] : ["", BOOKING_API_URL];
 let activeApiBase = API_BASES[0];
 const AGE_GROUP_PRICES = Object.freeze({ standard: 15, youth: 10, child: 8, underFive: 0 });
+// Un enfant (5–14 ans) ou un moins de 5 ans ne peut pas s’inscrire seul : la
+// réservation doit contenir au moins un accompagnant de 15 ans ou plus
+// (plein tarif ou tarif 15–25 ans). Message identique côté serveur et moteur.
+const COMPANION_GROUP_KEYS = Object.freeze(["standard", "youth"]);
+const CHILD_ALONE_MESSAGE = "Un enfant ou un moins de 5 ans ne peut pas s’inscrire seul : ajoutez au moins un accompagnant de 15 ans ou plus (plein tarif ou tarif 15–25 ans).";
+function groupsNeedCompanion(ageGroups) {
+  const minors = (ageGroups.child || 0) + (ageGroups.underFive || 0);
+  if (minors < 1) return false;
+  return COMPANION_GROUP_KEYS.every((key) => (ageGroups[key] || 0) < 1);
+}
 
 const header = document.querySelector("[data-header]");
 const menuToggle = document.querySelector(".menu-toggle");
@@ -1511,11 +1521,14 @@ function updateAgeEstimate() {
     ageGroupStatus.textContent = "Renseignez votre groupe pour afficher le total et l’estimation.";
     return;
   }
-  ageGroupStatus.classList.toggle("is-error", !valid || total < 1 || total > limit || (selected && total > selected.remaining));
+  const childAlone = valid && groupsNeedCompanion(ageGroups);
+  ageGroupStatus.classList.toggle("is-error", !valid || total < 1 || total > limit || childAlone || (selected && total > selected.remaining));
   if (!valid) {
     ageGroupStatus.textContent = "Saisissez un nombre entier supérieur ou égal à zéro dans chaque tranche.";
   } else if (total < 1) {
     ageGroupStatus.textContent = "Indiquez au moins une personne pour estimer le montant.";
+  } else if (childAlone) {
+    ageGroupStatus.textContent = CHILD_ALONE_MESSAGE;
   } else if (total > limit) {
     ageGroupStatus.textContent = `Une visite est limitée à ${limit} personnes au total.`;
   } else if (selected && total > selected.remaining) {
@@ -2092,6 +2105,11 @@ async function submitPublicBooking(values) {
   if (!ageGroupsValid || participants < 1 || participants > limit) {
     updateFormStatus(`Répartissez les participants par tarif; une visite est limitée à ${limit} personnes au total.`, "error");
     ageGroupInputs.find((input) => !input.validity.valid)?.focus();
+    return;
+  }
+  if (groupsNeedCompanion(ageGroups)) {
+    updateFormStatus(CHILD_ALONE_MESSAGE, "error");
+    ageGroupInputs[0]?.focus();
     return;
   }
   if (participants > session.remaining) {

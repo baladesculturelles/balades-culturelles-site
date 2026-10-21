@@ -47,7 +47,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "b4a5110f33";
+const ENGINE_VERSION = "2b438739fd";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -83,6 +83,10 @@ const SMALL_GROUP_TOPICS = Object.freeze([
 ]);
 const DEFAULT_PRICES = Object.freeze({ standard: 15, youth: 10, child: 8, underFive: 0 });
 const PRICE_KEYS = Object.freeze(["standard", "youth", "child", "underFive"]);
+// Un enfant (5–14 ans) ou un moins de 5 ans ne peut pas réserver seul : la
+// demande doit comporter au moins un accompagnant de 15 ans ou plus.
+const COMPANION_KEYS = Object.freeze(["standard", "youth"]);
+const CHILD_ALONE_MESSAGE = "Un enfant ou un moins de 5 ans ne peut pas s’inscrire seul : ajoutez au moins un accompagnant de 15 ans ou plus (plein tarif ou tarif 15–25 ans).";
 
 // Étapes de suivi d’une réservation. Seule « Annulée » libère les places.
 const STATUSES = Object.freeze(["Confirmée", "Contactée", "Réalisée", "Annulée"]);
@@ -3196,6 +3200,9 @@ function validateAgeGroups_(value, participants, capacity) {
   const total = PRICE_KEYS.reduce((sum, key) => sum + groups[key], 0);
   if (total !== participants || total < 1 || total > capacity) {
     throw new Error(`La répartition par tarif doit totaliser le nombre de personnes, dans la limite de ${capacity}.`);
+  }
+  if (groups.child + groups.underFive > 0 && !COMPANION_KEYS.some((key) => groups[key] > 0)) {
+    throw new Error(CHILD_ALONE_MESSAGE);
   }
   return groups;
 }

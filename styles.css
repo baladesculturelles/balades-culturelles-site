@@ -105,6 +105,51 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand-lockup strong { font-family: var(--serif); font-size: 17px; font-weight: 600; letter-spacing: -.04em; color: #111111; }
 .brand-lockup em { color: #111111; font-weight: 600; font-style: normal; }
 .brand-lockup small { color: #222222; font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+/* ---------------------------------------------------------------------------
+   Frise de Paris dans l’en-tête
+   Illustration au trait vert (même vert que le logo), placée entre la marque
+   et le menu. Elle habille le vide central sans déplacer la navigation :
+   elle est purement décorative (aria-hidden, pointer-events none) et cède
+   la place d’elle-même quand les liens ont besoin de la largeur.
+   --------------------------------------------------------------------------- */
+.header-skyline {
+  display: none;
+  /* flex 1 1 auto + min-width 0 : la frise occupe le vide restant, mais peut
+     se réduire sans jamais pousser le menu hors de l’écran. */
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 360px;
+  margin-inline: 14px;
+  line-height: 0;
+  pointer-events: none;
+}
+/* La hauteur pilote la taille du dessin ; « contain » le centre dans l’espace
+   disponible. Elle reste sous la hauteur de l’en-tête (82 px / 72 px). */
+.header-skyline img {
+  display: block;
+  width: 100%;
+  height: 62px;
+  object-fit: contain;
+  object-position: center;
+}
+@media (min-width: 861px) {
+  .header-skyline { display: block; }
+}
+@media (min-width: 861px) and (max-width: 1040px) {
+  /* Navigation desktop déjà large : frise plus basse, donc plus discrète. */
+  .header-skyline { max-width: 250px; }
+  .header-skyline img { height: 40px; }
+}
+@media (max-width: 760px) {
+  /* À côté de la marque et du bouton menu : plus discrète, jamais collée. */
+  .header-skyline { display: block; max-width: 220px; margin-inline: auto 8px; }
+  .header-skyline img { height: clamp(34px, 8.2vw, 46px); }
+}
+@media (max-width: 400px) {
+  /* 280 à 400 px : marque + frise + bouton menu ne tiendraient pas. */
+  .header-skyline { display: none; }
+}
+
 .primary-navigation { display: flex; align-items: center; gap: clamp(17px, 2.8vw, 37px); }
 .primary-navigation > a:not(.nav-cta),
 .nav-dropdown-toggle {
@@ -485,6 +530,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .guide-copy h2 em { color: var(--clay); }
 .guide-subtitle { max-width: 620px; margin: 14px 0 0; color: var(--clay); font-family: var(--serif); font-size: clamp(17px, 1.7vw, 21px); font-style: italic; line-height: 1.4; }
 .guide-lead { max-width: 620px; margin: 19px 0 0; color: #596056; font-size: 12px; line-height: 1.8; }
+.guide-copy .button { margin-top: 24px; }
 .guide-quote { margin: 25px 0; padding: 13px 0 13px 17px; border-left: 2px solid var(--clay); color: var(--forest); font-family: var(--serif); font-size: 18px; font-style: italic; line-height: 1.45; }
 .guide-principles { display: grid; grid-template-columns: 1fr; gap: 0; margin: 0 0 23px; padding: 0; list-style: none; }
 .guide-principles li { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(36,42,35,.14); color: #4e564d; font-size: 10px; }
@@ -570,6 +616,34 @@ button, a { -webkit-tap-highlight-color: transparent; }
   color: var(--muted);
   font-size: 11px;
   margin: 10px 0 20px;
+}
+
+/* Encadré « Bon à savoir » des catégories (règles des balades familles) */
+.category-note {
+  max-width: 780px;
+  padding: 20px 24px 21px;
+  border: 1px solid rgba(24,62,48,.14);
+  border-left: 3px solid var(--clay);
+  border-radius: 0 6px 6px 0;
+  background: var(--paper-soft);
+}
+.category-note-label {
+  margin: 0 0 10px;
+  color: var(--clay);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.category-note-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.category-note-list li { position: relative; padding-left: 17px; color: #4f564d; font-size: 11.5px; line-height: 1.65; }
+.category-note-list li::before {
+  position: absolute; top: 0; left: 0;
+  color: var(--clay); content: '✳'; font-size: 10px; line-height: 1.9;
+}
+@media (max-width: 560px) {
+  .category-note { padding: 17px 18px 18px; }
+  .category-note-list li { font-size: 11px; }
 }
 
 .program .next-card,
@@ -755,6 +829,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 }
 .price-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(36,42,35,.12); color: var(--muted); font-size: 10px; }
 .price-list li strong { color: var(--forest); font-family: var(--serif); font-size: 16px; font-weight: 600; white-space: nowrap; }
+/* Précision sous la grille tarifaire : le montant est rappelé dans l’e-mail de
+   confirmation. Spécificité > « .practical-card > p » pour garder cette taille. */
+.practical-price .price-note { margin: 13px 0 0; padding-top: 11px; border-top: 1px solid rgba(36,42,35,.12); color: var(--muted); font-size: 10px; font-style: italic; line-height: 1.65; }
 .practical-card > a { display: inline-flex; align-items: center; gap: 9px; margin-top: 16px; color: var(--forest); font-size: 10px; font-weight: 750; }
 .practical-card > a span { color: var(--clay); font-size: 14px; }
 /* La page « Infos pratiques » n'a qu'un titre : les cartes suivent directement. */
@@ -1797,10 +1874,16 @@ html.dialog-open body { overflow: hidden; }
 }
 
 /* --------------------------------------------------------------------------
-   Titre + logo de l’accueil sur téléphone
-   Le logo à droite du titre (demandé) prend de la place : sans réglage, le mot
-   « culturelles » ne pouvait pas se réduire sous sa largeur et débordait à
-   droite, ce qui rendait toute la page défilable horizontalement.
+   Titre + logo de l’accueil
+   Le logo est posé à droite du titre. Deux contraintes se répondent ici :
+   1. il doit rester généreux et lisible (120 px sur ordinateur, ~90 px sur
+      téléphone) ;
+   2. il ne doit pas coller au bord droit en laissant un grand vide après le
+      titre, ni repousser le mot « culturelles » hors de sa colonne (la page
+      ne doit jamais devenir défilable horizontalement).
+   La largeur du logo est donc fluide (clamp + vw) et, sur ordinateur, la
+   colonne de gauche est très légèrement élargie : le titre garde exactement
+   la même largeur utile qu’avant, seul le logo profite de la place.
    -------------------------------------------------------------------------- */
 .hero .hero-brand { gap: 14px; align-items: center; }
 .hero .hero-brand-heading {
@@ -1809,17 +1892,19 @@ html.dialog-open body { overflow: hidden; }
   overflow-wrap: break-word;
   hyphens: auto;
 }
+@media (min-width: 1041px) {
+  /* Le logo grossit dans cette colonne : on lui rend l’espace pris au visuel. */
+  .hero { grid-template-columns: .95fr 1.05fr; }
+}
 @media (min-width: 761px) {
-  .hero .hero-brand-logo { width: 96px; height: 96px; }
+  .hero .hero-brand-logo { width: clamp(96px, 9.5vw, 120px); height: clamp(96px, 9.5vw, 120px); }
 }
 @media (max-width: 760px) {
   .hero .hero-brand { gap: 12px; }
-  .hero .hero-brand-logo { width: 64px; height: 64px; }
-  .hero .hero-brand-heading { font-size: clamp(38px, 12vw, 52px); }
-}
-@media (max-width: 360px) {
-  .hero .hero-brand-logo { width: 56px; height: 56px; }
-  .hero .hero-brand-heading { font-size: clamp(34px, 11.6vw, 44px); }
+  /* Logo bien visible, sans étouffer le titre : 72 px minimum sur petit écran,
+     jusqu’à 92 px sur les grands téléphones. */
+  .hero .hero-brand-logo { width: clamp(72px, 22vw, 92px); height: clamp(72px, 22vw, 92px); }
+  .hero .hero-brand-heading { font-size: clamp(36px, 11.2vw, 50px); }
 }
 
 /* --------------------------------------------------------------------------
@@ -2171,10 +2256,10 @@ html { overflow-x: hidden; }
     gap: 8px;
   }
 
-  /* Hero : logo plus petit, titre qui s’adapte */
+  /* Hero : le logo reste présent (68–78 px) et le titre s’adapte autour. */
   .hero .hero-brand-logo {
-    width: 52px;
-    height: 52px;
+    width: clamp(68px, 19.5vw, 78px);
+    height: clamp(68px, 19.5vw, 78px);
   }
   .hero .hero-brand-heading {
     font-size: clamp(30px, 10.5vw, 38px);
