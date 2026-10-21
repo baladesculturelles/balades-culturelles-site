@@ -146,8 +146,37 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .header-skyline img { height: clamp(34px, 8.2vw, 46px); }
 }
 @media (max-width: 400px) {
-  /* 280 à 400 px : marque + frise + bouton menu ne tiendraient pas. */
-  .header-skyline { display: none; }
+  /* Téléphones étroits (341–400 px) : la frise reste visible, réduite, sans
+     jamais pousser le bouton menu hors écran. Les éléments fixes (bouton menu
+     44 px + frise ~60–75 px + écarts) restent bien sous la largeur utile, donc
+     pas de débordement ; la marque absorbe le restant en se réduisant. */
+  .header-skyline {
+    display: block;
+    flex: 0 0 auto;
+    max-width: min(70px, 22vw);
+    margin-inline: 6px;
+  }
+  .header-skyline img { height: clamp(16px, 5vw, 24px); }
+}
+/* Très petits écrans (280–340 px) : la frise passe sur sa propre ligne sous
+   la marque et le bouton de menu. On garde ainsi l'illustration visible sans
+   rétrécir les éléments de navigation ni créer de débordement horizontal. */
+@media (max-width: 340px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding-block: 6px;
+    row-gap: 2px;
+  }
+  .header-skyline {
+    display: block;
+    flex: 0 0 100%;
+    max-width: none;
+    margin-inline: 0;
+  }
+  .header-skyline img {
+    width: 100%;
+    height: 26px;
+  }
 }
 
 .primary-navigation { display: flex; align-items: center; gap: clamp(17px, 2.8vw, 37px); }
