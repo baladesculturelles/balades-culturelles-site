@@ -26,9 +26,16 @@
  * projet en application Web (voir README.md).
  */
 
+// Adresse publique du site. C’est le seul réglage à changer si le site déménage :
+// le programme lu par le moteur, les liens des e-mails de confirmation, la
+// description des événements d’agenda et le tableau de bord en découlent.
+// Pour la changer sans toucher au code :
+// Paramètres du projet → Propriétés du script → SITE_URL
+// (adresse complète, terminée ou non par « / », par exemple https://baladesculturelles.fr).
+const SITE_URL = "https://baladesculturelles.github.io/balades-culturelles-site/";
 // Adresse du programme publié avec le site. Pour la changer sans toucher au code :
 // Paramètres du projet → Propriétés du script → PROGRAMME_URL.
-const PROGRAMME_URL = "https://baladesculturelles.github.io/balades-culturelles-site/programme.json";
+const PROGRAMME_URL = `${SITE_URL}programme.json`;
 const TIME_ZONE = "Europe/Paris";
 const ROOT_FOLDER_NAME = "Balades Culturelles — Réservations";
 const DASHBOARD_NAME = "Tableau de bord des réservations";
@@ -40,7 +47,7 @@ const REMOVED_KEEP_DAYS = 30;
 const PROGRAM_CHUNK_CHARS = 8000;
 
 const ENGINE_API = 1;
-const ENGINE_VERSION = "0649745e38";
+const ENGINE_VERSION = "b4a5110f33";
 
 /* ------------------------------------------------------------------ */
 /* E-mail de confirmation                                             */
@@ -360,7 +367,7 @@ function calendarDescription_(session, stats, visit, remaining) {
   if (visit) lines.push("", `Fiche de la date : ${visit.getUrl()}`);
   const dashboard = openIfAlive_(props_().getProperty("DASHBOARD_ID"));
   if (dashboard) lines.push(`Tableau de bord : ${dashboard.getUrl()}`);
-  lines.push("", "Événement créé et mis à jour automatiquement par le site Balades Culturelles.");
+  lines.push("", `Événement créé et mis à jour automatiquement par le site Balades Culturelles : ${siteUrl_()}`);
   return lines.join("\n");
 }
 
@@ -590,6 +597,8 @@ function createCustomRequest_(body) {
   const slot = cleanText_(body.slot, 60);
   const rawParticipants = cleanText_(body.participants, 20);
   const message = cleanText_(body.message, 1200);
+  // Balade visée quand la demande part d’un lien du site (champ dédié, pas le message).
+  const requestedWalk = cleanText_(body.walk, 200);
 
   if (!firstName) throw new Error("Saisissez votre prénom.");
   if (!lastName) throw new Error("Saisissez votre nom.");
@@ -620,6 +629,7 @@ function createCustomRequest_(body) {
     `• Téléphone : ${phone}`,
     `• E-mail : ${email}`,
     `• Type de sortie : ${topic}`,
+    requestedWalk ? `• Balade souhaitée : ${requestedWalk}` : "",
     dateLabel ? `• Date souhaitée : ${dateLabel}` : "",
     slot && slot !== "À convenir" ? `• Créneau souhaité : ${slot}` : "",
     rawParticipants ? `• Nombre de personnes estimé : ${rawParticipants}` : "",
@@ -641,6 +651,7 @@ function createCustomRequest_(body) {
       "",
       "Récapitulatif de votre demande :",
       `• Demande : ${topic}`,
+      requestedWalk ? `• Balade souhaitée : ${requestedWalk}` : "",
       dateLabel ? `• Date souhaitée : ${dateLabel}` : "",
       slot && slot !== "À convenir" ? `• Créneau souhaité : ${slot}` : "",
       rawParticipants ? `• Nombre de personnes estimé : ${rawParticipants}` : "",
@@ -699,8 +710,20 @@ function getAvailability_() {
 /* Programme lu sur le site                                           */
 /* ------------------------------------------------------------------ */
 
+/** Adresse publique du site, toujours terminée par « / » (Propriétés du script → SITE_URL). */
+function siteUrl_() {
+  const configured = cleanText_(props_().getProperty("SITE_URL") || SITE_URL, 300);
+  if (!configured) return SITE_URL;
+  return /\/$/.test(configured) ? configured : `${configured}/`;
+}
+
+/** Lien vers une page du site publié (« faq.html », « balades.html »…). */
+function sitePageUrl_(page) {
+  return siteUrl_() + String(page || "").replace(/^\/+/, "");
+}
+
 function programmeUrl_() {
-  return props_().getProperty("PROGRAMME_URL") || PROGRAMME_URL;
+  return cleanText_(props_().getProperty("PROGRAMME_URL") || "", 300) || sitePageUrl_("programme.json");
 }
 
 /** Programme enregistré lors de la dernière lecture réussie du site. */
@@ -1487,6 +1510,10 @@ function writeDashboard_(dashboard) {
   sheet.getRange("A3")
     .setValue(`Mis à jour le ${Utilities.formatDate(new Date(), TIME_ZONE, "dd/MM/yyyy 'à' HH:mm")} · ${programNote} · actualisation à chaque réservation et toutes les ${SYNC_EVERY_MINUTES} minutes · moteur ${ENGINE_VERSION}`)
     .setFontColor(COLORS.muted);
+  // Lien inverse : depuis le Drive, on revient au site public en un clic.
+  sheet.getRange("A4")
+    .setFormula(`=HYPERLINK("${siteUrl_()}";"Ouvrir le site public")`)
+    .setFontColor(COLORS.forest).setFontWeight("bold");
 
   const first = DASHBOARD_FIRST_ROW;
   const previous = sheet.getLastRow() - first + 1;
@@ -1728,6 +1755,9 @@ function buildConfirmationEmail_(booking) {
       "",
       "Pour annuler ou modifier, répondez simplement à cet e-mail en rappelant votre référence.",
       "",
+      "Toutes les réponses (rendez-vous, tarifs, annulation, météo) : " + sitePageUrl_("faq.html"),
+      "Le programme et les places restantes : " + siteUrl_(),
+      "",
       closing,
       "",
       "Marie-Tiyi Jalon",
@@ -1744,6 +1774,7 @@ function buildConfirmationEmail_(booking) {
       "</ul>",
       `<p style="margin:0 0 1em">${escapeHtml_(meetingLine_(booking.sheet))}</p>`,
       '<p style="margin:0 0 1em">Pour annuler ou modifier, répondez simplement à cet e-mail en rappelant votre référence.</p>',
+      `<p style="margin:0 0 1em">Toutes les réponses (rendez-vous, tarifs, annulation, météo)&nbsp;: <a href="${escapeHtml_(sitePageUrl_("faq.html"))}" style="color:#183e30">la page Questions fréquentes</a>.<br>Le programme et les places restantes&nbsp;: <a href="${escapeHtml_(siteUrl_())}" style="color:#183e30">le site des Balades Culturelles</a>.</p>`,
       `<p style="margin:0 0 1em">${escapeHtml_(closing)}</p>`,
       '<p style="margin:0">Marie-Tiyi Jalon<br>',
       `Téléphone : <a href="tel:${escapeHtml_(telHref_(guidePhone_()))}" style="color:#183e30">${escapeHtml_(guidePhone_())}</a><br>`,

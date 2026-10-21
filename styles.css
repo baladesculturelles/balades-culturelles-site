@@ -208,6 +208,34 @@ button, a { -webkit-tap-highlight-color: transparent; }
   letter-spacing: -.05em;
   line-height: .98;
   color: #000000;
+  flex: 1;
+  min-width: 0;
+}
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 0 0 10px;
+  flex-wrap: nowrap;
+}
+.hero-brand-logo {
+  width: 108px;
+  height: 108px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(24,62,48,.12);
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 10px 26px rgba(24,42,32,.14);
+}
+.hero-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
 }
 .hero-location {
   margin: 0 0 16px;
@@ -265,9 +293,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .hero-image-frame { position: relative; overflow: hidden; aspect-ratio: 1; border-radius: 2px 120px 2px 2px; background: var(--paper-deep); }
 .hero-image-frame img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: transform .8s cubic-bezier(.2,.65,.25,1); }
 .hero-visual:hover .hero-image-frame img { transform: scale(1.035); }
-.hero-seal { position: absolute; z-index: 2; top: 7%; right: -3px; width: 124px; height: 124px; padding: 7px; border: 1px solid rgba(24,62,48,.22); border-radius: 50%; background: var(--white); box-shadow: 0 16px 38px rgba(24,42,32,.2); }
-.hero-seal img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
-
 .editorial-strip { color: var(--white); background: var(--forest); }
 .editorial-strip-inner { display: grid; grid-template-columns: 1fr 34px 1.4fr 34px 1fr; min-height: 91px; align-items: center; gap: 20px; }
 .strip-fact { display: flex; align-items: baseline; gap: 12px; }
@@ -724,7 +749,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .practical-card > a span { color: var(--clay); font-size: 14px; }
 /* La page « Infos pratiques » n'a qu'un titre : les cartes suivent directement. */
 .practical-compact { padding-top: clamp(6px, 1.2vw, 16px); }
-.practical-methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(36,42,35,.14); }
+.practical-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(36,42,35,.14); }
 .practical-methods > div { padding-left: 13px; border-left: 2px solid var(--clay); }
 .practical-methods strong { display: block; color: var(--forest); font-family: var(--serif); font-size: 15px; font-weight: 600; }
 .practical-methods p { margin: 5px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.6; }
@@ -935,7 +960,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .hero-lead { max-width: 590px; }
   .hero-visual { width: min(590px, calc(100% - 12px)); justify-self: center; padding: 0 13px 42px 0; }
   .hero-image-frame { aspect-ratio: 1.1; border-top-right-radius: 100px; }
-  .hero-seal { right: -1px; }
   .editorial-strip-inner { grid-template-columns: 1fr 20px 1.2fr 20px 1fr; min-height: 82px; gap: 7px; }
   .strip-fact { flex-direction: column; align-items: flex-start; gap: 0; }
   .strip-fact strong { font-size: 17px; }
@@ -984,7 +1008,6 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .hero-visual { width: calc(100% - 5px); padding: 0 6px 50px 0; }
   .hero-image-frame { aspect-ratio: .95; border-top-right-radius: 75px; }
   .hero-image-frame img { object-position: 52% center; }
-  .hero-seal { top: 6%; width: 92px; height: 92px; padding: 5px; }
 
 
   .editorial-strip-inner { grid-template-columns: 1fr 1px 1.12fr 1px 1fr; min-height: 79px; gap: 7px; }
@@ -1480,3 +1503,491 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     .contact-form textarea { font-size: 16px; }
   }
 }
+
+/* --------------------------------------------------------------------------
+   Fenêtres modales : lisibilité, hiérarchie et divulgation progressive
+   L’objectif est simple : peu de texte à l’écran, l’essentiel d’abord,
+   le détail à un clic.
+   -------------------------------------------------------------------------- */
+
+/* ---- 1. Formulaire de réservation ---- */
+/* Une seule consigne d’obligation, en tête, au lieu d’un titre + un fil d’étapes. */
+.booking-dialog .form-required-note {
+  margin: 0 0 16px;
+  color: #6a7167;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.booking-dialog .form-required-note b { color: var(--clay); }
+
+/* Les textes d’aide passent au-dessus du minimum lisible (9 px → 11,5 px). */
+.booking-dialog .form-hint { max-width: none; color: #5f675c; font-size: 11.5px; line-height: 1.6; }
+.booking-dialog .age-groups-intro { margin-bottom: 11px; color: #5f675c; font-size: 11.5px; }
+.booking-dialog .age-group-status { margin-top: 10px; color: #5f675c; font-size: 11px; }
+.booking-dialog .booking-capacity-note { font-size: 11.5px; }
+.booking-dialog .privacy-note { color: #6b7268; font-size: 11px; line-height: 1.65; }
+
+/* Les étapes respirent : un filet sépare les blocs, la légende porte le numéro. */
+.booking-dialog .form-step { padding-top: 20px; }
+.booking-dialog .form-step + .form-step { margin-top: 18px; }
+.booking-dialog .form-step > legend { margin-bottom: 14px; font-size: 19px; }
+.booking-dialog .age-groups { margin-top: 16px; }
+
+/* Barre d’action collante : le bouton reste visible pendant le défilement. */
+.booking-dialog-body { padding-bottom: 0; }
+.booking-dialog .form-bottom {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 24px -28px 0;
+  padding: 14px 28px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(36,42,35,.14);
+  background: rgba(250, 248, 242, .97);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.booking-dialog .form-bottom .button-submit { flex: 0 0 auto; }
+@media (max-width: 700px) {
+  .booking-dialog .form-bottom {
+    margin: 20px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .booking-dialog .form-bottom .button-submit { width: 100%; }
+  .booking-dialog .form-bottom .form-hint { font-size: 11px; }
+}
+
+/* ---- 2. Fenêtre juridique : une section = un titre cliquable ---- */
+.legal-section {
+  margin: 0 0 9px;
+  border: 1px solid rgba(36,42,35,.14);
+  border-radius: 4px 16px 4px 4px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.legal-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  list-style: none;
+  transition: background .18s ease, color .18s ease;
+}
+.legal-section > summary::-webkit-details-marker { display: none; }
+.legal-section > summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  color: var(--clay);
+  font-family: var(--sans);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+.legal-section > summary:hover { background: #eef0e4; }
+.legal-section > summary:focus-visible { outline: 3px solid rgba(92,116,78,.35); outline-offset: -3px; }
+.legal-section[open] > summary { border-bottom: 1px solid var(--line); background: #eef0e4; }
+.legal-section[open] > summary::after { content: "–"; }
+.legal-section-body { padding: 2px 16px 14px; }
+.legal-section-body > p:first-child { margin-top: 10px; }
+.legal-section-body > p:last-child { margin-bottom: 2px; }
+
+/* Le corps juridique gagne en confort de lecture. */
+.legal-article p { color: #4f564d; font-size: 13px; line-height: 1.72; }
+.legal-article .legal-draft-notice { font-size: 12px; line-height: 1.6; }
+
+/* ---- 3. Présentation d’une balade : accroche puis « Lire la suite » ---- */
+.walk-dialog-body { grid-template-rows: minmax(0, 1fr) auto; }
+.walk-article.is-collapsed {
+  max-height: min(44vh, 380px);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 72%, transparent 100%);
+  mask-image: linear-gradient(#000 72%, transparent 100%);
+}
+.walk-dialog-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12px 28px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+.walk-dialog-more-wrap[hidden] { display: none; }
+.walk-dialog-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 20px;
+  border: 1px solid rgba(24,62,48,.28);
+  border-radius: 100px;
+  color: var(--forest);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.walk-dialog-more:hover { border-color: var(--forest); color: var(--white); background: var(--forest); }
+.walk-dialog-more:focus-visible { outline: 3px solid rgba(92,116,78,.35); outline-offset: 2px; }
+.walk-dialog-more span { color: var(--clay); font-size: 13px; }
+.walk-dialog-more:hover span { color: var(--gold); }
+
+@media (max-width: 700px) {
+  .walk-article.is-collapsed { max-height: min(40vh, 320px); }
+  .walk-dialog-more-wrap { padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .legal-section > summary { padding: 12px 14px; font-size: 15px; }
+  .legal-section-body { padding: 2px 14px 14px; }
+}
+
+/* --------------------------------------------------------------------------
+   Fenêtre de réservation sur téléphone : feuille plein écran fiable
+   Le plein écran en « height: 100% » suivait le viewport de mise en page, plus
+   haut que la zone visible quand la barre d’adresse est affichée : le bas de la
+   fenêtre (et le bouton Réserver) passait sous l’interface du navigateur.
+   On s’appuie sur dvh, avec repli vh, et on resserre la mise en page.
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .legal-dialog,
+  .legal-dialog.booking-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .legal-dialog.booking-dialog .legal-dialog-frame {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+  }
+  .booking-dialog-body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 16px 16px 0;
+    -webkit-overflow-scrolling: touch;
+    /* Un champ mis au point près du bas ne doit pas se cacher sous le bouton. */
+    scroll-padding-bottom: 110px;
+  }
+  /* L’en-tête reste compact : la croix et le titre suffisent en haut de l’écran. */
+  .legal-dialog.booking-dialog .legal-dialog-head { padding: 14px 60px 12px 16px; }
+  .legal-dialog.booking-dialog .legal-dialog-head {
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(60px + env(safe-area-inset-right, 0px));
+  }
+  .legal-dialog.booking-dialog .legal-dialog-head .eyebrow { margin-bottom: 5px; font-size: 8.5px; }
+  .legal-dialog.booking-dialog .legal-dialog-head h2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: none;
+    font-size: 20px;
+    line-height: 1.16;
+  }
+  /* La date et les places sont déjà rappelées dans le formulaire : on évite le doublon. */
+  .booking-dialog-meta { margin-top: 5px; font-size: 11px; }
+  .booking-dialog .form-required-note { margin-bottom: 12px; }
+  .booking-dialog .form-step { padding-top: 14px; }
+  .booking-dialog .form-step + .form-step { margin-top: 14px; }
+  .booking-dialog .form-step > legend { margin-bottom: 10px; font-size: 17px; }
+  .booking-dialog .age-groups { margin-top: 12px; padding: 12px 10px; }
+  .booking-dialog .booking-lock-note { font-size: 11px; }
+  .booking-dialog .booking-capacity-note,
+  .booking-dialog .age-group-status,
+  .booking-dialog .privacy-note { font-size: 11px; }
+  /* Barre d’action : pleine largeur, collée au bas de la zone visible. */
+  .booking-dialog .form-bottom {
+    margin: 16px -16px 0;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .booking-dialog .form-bottom .button-submit { width: 100%; min-height: 48px; }
+  .booking-dialog .form-bottom .form-hint { font-size: 11px; line-height: 1.5; }
+  .booking-dialog .legal-dialog-close { top: 12px; right: 14px; }
+  .booking-dialog .legal-dialog-close {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(14px + env(safe-area-inset-right, 0px));
+  }
+  .booking-dialog .form-row,
+  .booking-dialog .form-row-contact,
+  .booking-dialog #custom-booking-fields { grid-template-columns: minmax(0, 1fr); }
+  .booking-dialog .age-group-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Navigateurs qui gèrent les unités dynamiques (iOS 15.4+, Chrome 108+). */
+@supports (height: 100dvh) {
+  @media (max-width: 760px) {
+    .legal-dialog,
+    .legal-dialog.booking-dialog {
+      height: 100dvh;
+      max-height: 100dvh;
+    }
+  }
+}
+
+/* Petit téléphone (≤ 380 px) : on gagne encore de la place. */
+@media (max-width: 380px) {
+  .booking-dialog-body { padding: 13px 12px 0; }
+  .legal-dialog.booking-dialog .legal-dialog-head { padding: 12px 54px 10px 12px; }
+  .legal-dialog.booking-dialog .legal-dialog-head {
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(54px + env(safe-area-inset-right, 0px));
+  }
+  .legal-dialog.booking-dialog .legal-dialog-head h2 { font-size: 18px; }
+  .booking-dialog .form-bottom { margin: 14px -12px 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .booking-dialog .age-group-grid label { padding: 9px 10px; }
+}
+
+/* Téléphone en paysage (peu de hauteur) : en-tête et marges minimales. */
+@media (max-width: 980px) and (max-height: 520px) {
+  .legal-dialog.booking-dialog .legal-dialog-head { padding: 10px 56px 8px 14px; }
+  .legal-dialog.booking-dialog .legal-dialog-head .eyebrow { display: none; }
+  .legal-dialog.booking-dialog .legal-dialog-head h2 { font-size: 17px; }
+  .booking-dialog-meta { display: none; }
+  .booking-dialog-body { padding-top: 10px; }
+}
+
+/* Téléphone : la date et les places sont déjà affichées dans le formulaire,
+   juste sous le champ « Balade et date ». On retire le rappel de l’en-tête
+   pour alléger le haut de la fenêtre. */
+@media (max-width: 560px) {
+  .booking-dialog-meta { display: none; }
+}
+
+/* Fenêtre ouverte sur téléphone : la page derrière ne défile plus. */
+html.dialog-open,
+html.dialog-open body { overflow: hidden; }
+
+/* Téléphone : barre d’action opaque (le flou coûte cher et bave sur Android). */
+@media (max-width: 760px) {
+  .booking-dialog .form-bottom {
+    background: #faf8f2;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 -10px 24px rgba(20, 36, 28, .08);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Titre + logo de l’accueil sur téléphone
+   Le logo à droite du titre (demandé) prend de la place : sans réglage, le mot
+   « culturelles » ne pouvait pas se réduire sous sa largeur et débordait à
+   droite, ce qui rendait toute la page défilable horizontalement.
+   -------------------------------------------------------------------------- */
+.hero .hero-brand { gap: 14px; align-items: center; }
+.hero .hero-brand-heading {
+  /* Plus spécifique que « .hero h1 » : la taille suit la largeur disponible. */
+  font-size: clamp(40px, 7.5vw, 92px);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+@media (min-width: 761px) {
+  .hero .hero-brand-logo { width: 96px; height: 96px; }
+}
+@media (max-width: 760px) {
+  .hero .hero-brand { gap: 12px; }
+  .hero .hero-brand-logo { width: 64px; height: 64px; }
+  .hero .hero-brand-heading { font-size: clamp(38px, 12vw, 52px); }
+}
+@media (max-width: 360px) {
+  .hero .hero-brand-logo { width: 56px; height: 56px; }
+  .hero .hero-brand-heading { font-size: clamp(34px, 11.6vw, 44px); }
+}
+
+/* --------------------------------------------------------------------------
+   Aucun défilement horizontal : garantie de dernier recours
+   Même avec des polices système différentes, un arrondi de sous-pixel ou un
+   contenu ajouté plus tard, la page ne doit jamais pouvoir être tirée vers la
+   droite en laissant apparaître du vide.
+   `clip` n’ouvre pas de conteneur de défilement : les éléments « sticky »
+   (barre d’action du formulaire) continuent de fonctionner.
+   -------------------------------------------------------------------------- */
+html { overflow-x: hidden; }
+@supports (overflow: clip) {
+  html { overflow-x: clip; }
+  html.dialog-open { overflow-x: clip; }
+}
+
+/* --------------------------------------------------------------------------
+   Page « Questions fréquentes »
+   Une liste de questions dépliables, une seule ouverte à l'arrivée, et un
+   encadré de contact à côté sur grand écran.
+   -------------------------------------------------------------------------- */
+.faq-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: clamp(28px, 4vw, 56px);
+}
+.faq-list { border-top: 1px solid rgba(24, 62, 48, .16); }
+.faq-item { border-bottom: 1px solid rgba(24, 62, 48, .16); }
+.faq-item > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 6px;
+  cursor: pointer;
+  list-style: none;
+  transition: color .18s ease;
+}
+.faq-item > summary::-webkit-details-marker { display: none; }
+.faq-item > summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(24, 62, 48, .24);
+  border-radius: 50%;
+  color: var(--forest);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 28px;
+  text-align: center;
+  transition: transform .2s ease, background .2s ease, color .2s ease;
+}
+.faq-item[open] > summary::after { content: "−"; color: var(--white); background: var(--forest); border-color: var(--forest); }
+.faq-item > summary:hover { color: var(--clay); }
+.faq-item > summary:focus-visible { outline: 3px solid rgba(92, 116, 78, .35); outline-offset: 2px; }
+.faq-item > summary h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: 550;
+  letter-spacing: -.02em;
+  line-height: 1.25;
+}
+.faq-answer { padding: 0 46px 22px 6px; }
+.faq-answer p { margin: 0 0 12px; color: #4f564d; font-size: 14px; line-height: 1.75; }
+.faq-answer p:last-child { margin-bottom: 0; }
+.faq-answer a { color: var(--forest); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.faq-answer strong { color: var(--forest); }
+
+.faq-help {
+  position: sticky;
+  top: 96px;
+  padding: 24px 22px 22px;
+  border: 1px solid rgba(24, 62, 48, .16);
+  border-top: 2px solid var(--moss);
+  border-radius: 4px 18px 4px 4px;
+  background: var(--paper-soft);
+}
+.faq-help .eyebrow { margin-bottom: 10px; }
+.faq-help h2 {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -.03em;
+  line-height: 1.18;
+}
+.faq-help p { margin: 0 0 16px; color: var(--muted); font-size: 12.5px; line-height: 1.65; }
+.faq-help .button { width: 100%; justify-content: center; }
+
+@media (max-width: 980px) {
+  .faq-layout { grid-template-columns: minmax(0, 1fr); }
+  .faq-help { position: static; }
+}
+@media (max-width: 560px) {
+  .faq-item > summary { padding: 17px 2px; gap: 12px; }
+  .faq-item > summary h2 { font-size: 17.5px; }
+  .faq-answer { padding: 0 6px 20px; }
+  .faq-answer p { font-size: 13.5px; }
+  .faq-help { padding: 20px 18px; }
+}
+
+/* Page « Me contacter » : un vrai titre de page, au-dessus de la carte. */
+.contact-head {
+  max-width: 640px;
+  margin: 0 auto clamp(28px, 4vw, 44px);
+  text-align: center;
+}
+.contact-head .eyebrow { margin-bottom: 14px; justify-content: center; }
+.contact-title {
+  margin: 0;
+  color: var(--white);
+  font-family: var(--serif);
+  font-size: clamp(40px, 6vw, 66px);
+  font-weight: 500;
+  letter-spacing: -.055em;
+  line-height: 1.02;
+}
+.contact-title em { color: var(--sage); font-style: italic; font-weight: 500; }
+.contact-lead {
+  max-width: 480px;
+  margin: 16px auto 0;
+  color: rgba(255, 253, 248, .74);
+  font-size: clamp(14px, 1.2vw, 16px);
+  line-height: 1.7;
+}
+@media (max-width: 560px) {
+  .contact-head { margin-bottom: 26px; }
+  .contact-title { font-size: clamp(36px, 10.5vw, 48px); }
+  .contact-lead { font-size: 14px; }
+}
+
+/* Confirmation de réservation : titre, lignes étiquetées, consigne d'annulation. */
+.form-status[data-state="success"] .confirmation-title {
+  margin: 0 0 12px;
+  color: #27442e;
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+.confirmation-details {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 13px;
+}
+.confirmation-line {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.confirmation-line > span {
+  color: #5c675a;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.confirmation-line > strong { color: #1f3327; font-weight: 600; }
+.form-status[data-state="success"] .confirmation-next {
+  margin: 0;
+  padding-top: 11px;
+  border-top: 1px solid rgba(39, 68, 46, .18);
+  color: #3d5245;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.confirmation-next a { color: #27442e; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 560px) {
+  .confirmation-line { grid-template-columns: minmax(0, 1fr); gap: 1px; }
+  .confirmation-line > span { font-size: 10px; }
+  .form-status[data-state="success"] { padding: 14px 15px; }
+}
+
+.practical-methods a { color: var(--forest); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }

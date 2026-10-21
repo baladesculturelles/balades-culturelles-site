@@ -23,13 +23,26 @@ const SMALL_GROUP_TOPICS = Object.freeze([
   "Je souhaite organiser une visite pour un groupe de seniors",
   "Je souhaite organiser une sortie pour une famille",
 ]);
-// URL de la Web App Apps Script (…/exec), pour la version GitHub Pages. Laisser vide avec le serveur Python local.
+/* ------------------------------------------------------------------ */
+/* Liens entre le site et la suite Google                             */
+/* ------------------------------------------------------------------ */
+// 1. Site → Google. Adresse de la Web App Apps Script (elle finit par « /exec ») :
+//    c’est elle qui enregistre les réservations dans le Google Drive de Marie-Tiyi
+//    et qui relit le programme publié. Laisser vide avec le serveur Python local.
+//    Pour la redéployer : google-app-script/README.md, « Déployer en application Web ».
 const BOOKING_API_URL = "https://script.google.com/macros/s/AKfycbzo7ZZCjaeM2cOuqeLq08qfhwOBwKuCn2zWvHCXamJhlxy67ZM1or_glOYAkx32BKe4hA/exec";
+// 2. Google → site. Adresse publique du site (dépôt public balades-culturelles-site) :
+//    le script Google y relit programme.json et place ses liens (e-mails de
+//    confirmation, agenda, tableau de bord). Côté Google, le même réglage s’appelle
+//    SITE_URL (Propriétés du script) ; c’est aussi la base des URL absolues des
+//    pages (og:url, og:image). Un contrôle automatique vérifie que les deux côtés
+//    restent d’accord : tests/apps-script/test-code-gs.js.
+const PUBLIC_SITE_URL = "https://baladesculturelles.github.io/balades-culturelles-site/";
 // Le site publié interroge la Web App Google. Partout ailleurs (aperçu Arena, serveur
 // local, fichier ouvert dans un navigateur), l’API du serveur Python voisin est
 // essayée d’abord — elle sert le programme complet, seniors et familles compris —
 // puis la Web App prend le relais si elle n’est pas joignable.
-const PUBLISHED_HOSTS = Object.freeze(["baladesculturelles.github.io"]);
+const PUBLISHED_HOSTS = Object.freeze([new URL(PUBLIC_SITE_URL).hostname]);
 const IS_PUBLISHED_SITE = PUBLISHED_HOSTS.includes(window.location.hostname);
 const API_BASES = IS_PUBLISHED_SITE ? [BOOKING_API_URL] : ["", BOOKING_API_URL];
 let activeApiBase = API_BASES[0];
@@ -61,7 +74,7 @@ const submitButton = document.querySelector("#submit-booking");
 // Chaque balade a son lien : quand la fenêtre s'ouvre depuis ce lien, l'offre et
 // la balade sont figées. Le visiteur garde seulement le nombre de personnes et
 // ses coordonnées. Pour une autre balade, il revient au programme.
-const bookingLock = { interest: "", walk: "", date: "", slot: "" };
+const bookingLock = { interest: "", walk: "", date: "", slot: "", askedWalk: "" };
 let lockedTopicInput = null;
 const bookingLockNote = (() => {
   if (!publicSessionField) return null;
@@ -92,6 +105,8 @@ function setBookingLock(target = {}) {
   bookingLock.walk = publicBooking ? target.walk || "" : "";
   bookingLock.date = publicBooking ? target.date || "" : "";
   bookingLock.slot = publicBooking ? target.slot || "" : "";
+  // Balade demandée depuis un lien : jointe à la demande, jamais imposée au champ libre.
+  bookingLock.askedWalk = target.walk || "";
   // Les options de date sont reconstruites pour ne garder que la balade choisie.
   if (availabilityLoaded && sessionSelect) renderSessionOptions();
   syncBookingLockUi();
@@ -128,11 +143,11 @@ function syncBookingLockUi() {
     bookingLockNote.hidden = !verrouille;
     if (verrouille) {
       if (bookingLock.walk && bookingLock.date) {
-        bookingLockNote.textContent = `Balade et date choisies depuis le programme : ${bookingLock.walk}, ${formatFrenchDate(bookingLock.date)}. Pour une autre balade, revenez au programme.`;
+        bookingLockNote.textContent = "Balade et date choisies dans le programme. Pour en changer, revenez au programme.";
       } else if (bookingLock.walk) {
-        bookingLockNote.textContent = `Balade choisie depuis le programme : ${bookingLock.walk}. Choisissez la date qui vous convient ; pour une autre balade, revenez au programme.`;
+        bookingLockNote.textContent = "Balade choisie dans le programme : sélectionnez la date.";
       } else {
-        bookingLockNote.textContent = "Le type de sortie est choisi depuis le programme. Pour en changer, revenez au programme des balades.";
+        bookingLockNote.textContent = "Type de sortie choisi dans le programme. Pour en changer, revenez au programme.";
       }
     }
   }
@@ -149,6 +164,8 @@ const walkDialogDates = document.querySelector("#walk-dialog-dates");
 const walkArticles = walkDialog ? [...walkDialog.querySelectorAll("[data-walk-article]")] : [];
 const walkFallbackArticle = walkDialog?.querySelector("[data-walk-fallback]");
 const walkFallbackText = walkDialog?.querySelector("[data-walk-fallback-text]");
+const walkMoreWrap = walkDialog?.querySelector("[data-walk-more-wrap]");
+const walkMoreButton = walkDialog?.querySelector("[data-walk-more]");
 
 let availabilityLoaded = false;
 let availabilityRequest = null;
@@ -391,10 +408,6 @@ function openBookingDialog(target = {}, trigger = null) {
   if (topicSelect) {
     topicSelect.value = interest;
     updateBookingMode();
-  }
-  if (messageInput && target.walk && (!messageInput.value.trim() || messageInput.dataset.prefilled === "true")) {
-    messageInput.value = `Balade souhaitée : ${target.walk}`;
-    messageInput.dataset.prefilled = "true";
   }
   if (PROGRAMME_TOPICS.includes(interest)) {
     chooseSession({ walk: target.walk, date: target.date, slot: target.slot });
@@ -1062,6 +1075,25 @@ const SENIOR_WALK_ALIASES = Object.freeze({
   "La muraille de Philippe Auguste": "Sur les traces de l’enceinte de Philippe Auguste",
 });
 
+// Les dates seniors et familles figurent aussi dans l’agenda : elles ne doivent
+// jamais être réinjectées dans le programme tout public (même balade, autre public).
+// Une séance seniors peut porter le titre de la version week-end : les deux clés
+// sont enregistrées pour la même date.
+const NON_PUBLIC_SESSION_KEYS = Object.freeze(new Set([
+  ...SENIOR_SESSIONS.flatMap((session) => {
+    const alias = SENIOR_WALK_ALIASES[session.walk];
+    const cles = [`${session.date}|${session.walk}`];
+    if (alias) cles.push(`${session.date}|${alias}`);
+    return cles;
+  }),
+  ...FAMILY_SESSIONS.flatMap((item) => item.dates.map((date) => `${date}|${item.walk}`)),
+]));
+
+/** Vrai si la séance venue de l’agenda appartient au programme seniors ou familles. */
+function agendaSessionIsOtherProgram(session) {
+  return NON_PUBLIC_SESSION_KEYS.has(`${session?.date || ""}|${session?.walk || ""}`);
+}
+
 function publicWalkInfos(walk) {
   const cible = SENIOR_WALK_ALIASES[walk] || walk;
   const carte = programCards.find((item) => (item.dataset.walk || "") === cible);
@@ -1322,7 +1354,7 @@ function updateBookingMode() {
   if (customCapacityNote) {
     customCapacityNote.hidden = publicMode;
     customCapacityNote.textContent = customLimit === GROUP_CAPACITY
-      ? "Indiquez le nombre de personnes : 20 personnes maximum pour un groupe de seniors ou une famille."
+      ? "20 personnes maximum pour ce type de visite."
       : "Indiquez le nombre de personnes estimé pour votre groupe.";
   }
   syncBookingLockUi();
@@ -1452,10 +1484,10 @@ function updateBookingRecap() {
   const title = document.createElement("strong");
   title.textContent = session.walk;
   bookingRecap.append(
-    "Votre réservation : ",
     title,
-    ` — ${formatFrenchDate(session.date)}, ${session.slot} · ${pluralPlaces(session.remaining)} restantes`,
-    total > 0 ? ` · ${total} personne${total > 1 ? "s" : ""} · ${amount} € (estimation)` : " · indiquez votre groupe",
+    total > 0
+      ? ` · ${total} personne${total > 1 ? "s" : ""} · ${amount} € (estimation)`
+      : " · indiquez votre groupe",
   );
 }
 
@@ -1489,7 +1521,7 @@ function updateAgeEstimate() {
   } else if (selected && total > selected.remaining) {
     ageGroupStatus.textContent = `Il ne reste que ${selected.remaining} place${selected.remaining > 1 ? "s" : ""} pour cette date.`;
   } else {
-    ageGroupStatus.textContent = "Estimation indicative selon les tarifs affichés; le paiement n’est pas effectué sur ce site.";
+    ageGroupStatus.textContent = "Estimation indicative : le paiement n’a pas lieu sur ce site.";
   }
 }
 
@@ -1600,7 +1632,7 @@ function updateSessionStatus() {
   }
   const session = sessionsById.get(sessionSelect?.value || "");
   if (!session) {
-    sessionStatus.textContent = "Sélectionnez une balade et une date ; les places restantes s’afficheront ici.";
+    sessionStatus.textContent = "Choisissez une balade et une date pour voir les places.";
     updateAgeEstimate();
     return;
   }
@@ -1609,9 +1641,9 @@ function updateSessionStatus() {
     updateAgeEstimate();
     return;
   }
-  sessionStatus.textContent = `Pour « ${session.walk} », le ${formatFrenchDate(session.date)} (${session.slot}), il reste ${pluralPlaces(session.remaining)} sur ${session.capacity}. Vous pouvez réserver jusqu’à ${session.remaining} personne${session.remaining > 1 ? "s" : ""}.`;
+  sessionStatus.textContent = `${formatFrenchDate(session.date)} · ${session.slot} — ${pluralPlaces(session.remaining)} disponible${session.remaining > 1 ? "s" : ""}`;
   if (bookingLock.walk && bookingLock.date) {
-    sessionStatus.textContent += " Cette balade et cette date sont déjà choisies : indiquez seulement le nombre de personnes.";
+    sessionStatus.textContent += " · indiquez le nombre de personnes";
   }
   updateAgeEstimate();
 }
@@ -1799,6 +1831,9 @@ function applyAgendaSessions(sessions) {
   const wanted = new Map();
   sessions.forEach((session) => {
     if (!session || !/^\d{4}-\d{2}-\d{2}$/.test(session.date || "") || !session.walk) return;
+    // Une date seniors ou familles reste dans son carrousel : la fusion avec
+    // l’agenda ne doit pas l’ajouter au programme tout public.
+    if (agendaSessionIsOtherProgram(session)) return;
     wanted.set(agendaKey(session.date, session.walk), session);
   });
   if (!wanted.size) return false;
@@ -1946,14 +1981,63 @@ function chooseSession(target) {
   syncBookingIdempotencySelection(sessionSelect.value, ageGroupTotal(readAgeGroups().ageGroups));
 }
 
-if (messageInput) {
-  messageInput.addEventListener("input", () => {
-    messageInput.dataset.prefilled = "false";
-  });
-}
-
 function getSelectedSession() {
   return sessionsById.get(sessionSelect?.value || "") || null;
+}
+
+/**
+ * Confirmation de réservation : un bloc court et hiérarchisé plutôt qu'un
+ * paragraphe de 500 caractères, illisible sur téléphone.
+ */
+function showBookingConfirmation(result) {
+  if (!formStatus) return;
+  const ligne = (etiquette, valeur) => {
+    const p = document.createElement("p");
+    p.className = "confirmation-line";
+    const span = document.createElement("span");
+    span.textContent = etiquette;
+    const strong = document.createElement("strong");
+    strong.textContent = valeur;
+    p.append(span, strong);
+    return p;
+  };
+
+  formStatus.replaceChildren();
+  formStatus.dataset.state = "success";
+
+  const titre = document.createElement("p");
+  titre.className = "confirmation-title";
+  titre.textContent = "C’est réservé, à bientôt !";
+  formStatus.append(titre);
+
+  const details = document.createElement("div");
+  details.className = "confirmation-details";
+  details.append(
+    ligne("Balade", result.walk),
+    ligne("Date", `${formatFrenchDate(result.date)} · ${result.slot}`),
+    ligne(
+      "Personnes",
+      `${result.participants} personne${result.participants > 1 ? "s" : ""} · estimation ${result.price_estimate} €`,
+    ),
+    ligne("Référence", result.reference),
+    ligne("Places restantes", `${result.remaining} sur ${result.capacity || ""}`.trim()),
+  );
+  formStatus.append(details);
+
+  const suite = document.createElement("p");
+  suite.className = "confirmation-next";
+  suite.append("Un e-mail de confirmation vient de vous être envoyé, avec le lieu de rendez-vous. ");
+  suite.append("Pour annuler ou modifier, répondez à cet e-mail ou écrivez à ");
+  const lien = document.createElement("a");
+  lien.href = "mailto:balades.culturelles@gmail.com";
+  lien.textContent = "balades.culturelles@gmail.com";
+  suite.append(lien);
+  suite.append(" en rappelant votre référence.");
+  formStatus.append(suite);
+
+  if (bookingDialog?.open) {
+    formStatus.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 function updateFormStatus(message, state = "info") {
@@ -2068,7 +2152,7 @@ async function submitPublicBooking(values) {
       await loadAvailability();
       return;
     }
-    updateFormStatus(`Réservation confirmée pour ${result.walk}, le ${formatFrenchDate(result.date)} à ${result.slot} (${result.participants} personne${result.participants > 1 ? "s" : ""}, estimation ${result.price_estimate} €). Référence : ${result.reference}. Il reste ${result.remaining} place${result.remaining > 1 ? "s" : ""}. Un e-mail de confirmation vient de vous être envoyé : conservez votre référence, elle suffit pour annuler ou modifier.`, "success");
+    showBookingConfirmation(result);
     // « Ajouter à mon agenda » n'apparaît qu'après une réservation réellement confirmée.
     showCalendarLink({
       walk: result.walk,
@@ -2154,6 +2238,7 @@ async function submitCustomRequest(values) {
         slot,
         participants,
         message,
+        walk: cleanField(bookingLock.askedWalk),
         website: String(values.get("website") || ""),
       }),
     });
@@ -2165,10 +2250,7 @@ async function submitCustomRequest(values) {
     updateFormStatus(result.message || "Votre demande a bien été envoyée à Marie-Tiyi. Un e-mail récapitulatif vient de vous être adressé (pensez à vérifier vos indésirables).", "success");
     if (dateInput) dateInput.value = "";
     if (customParticipantsInput) customParticipantsInput.value = "";
-    if (messageInput) {
-      messageInput.value = "";
-      messageInput.dataset.prefilled = "false";
-    }
+    if (messageInput) messageInput.value = "";
   } catch (error) {
     console.error("Échec de l’envoi de la demande sur mesure.", error);
     updateFormStatus("Impossible d’envoyer la demande pour le moment. Vous pouvez appeler Marie-Tiyi au 06 01 74 04 49 ou écrire à balades.culturelles@gmail.com.", "error");
@@ -2208,6 +2290,26 @@ if (needsAvailability) {
 
 const year = document.querySelector("[data-year]");
 if (year) year.textContent = String(new Date().getFullYear());
+
+// Sur téléphone, la page derrière une fenêtre ouverte ne doit pas défiler :
+// on fige le document tant qu’un dialogue est ouvert.
+const pageDialogs = [...document.querySelectorAll("dialog.legal-dialog")];
+
+function syncPageScrollLock() {
+  const ouvert = pageDialogs.some((dialogue) => dialogue.open || dialogue.hasAttribute("open"));
+  document.documentElement.classList.toggle("dialog-open", ouvert);
+}
+
+if (pageDialogs.length) {
+  pageDialogs.forEach((dialogue) => {
+    dialogue.addEventListener("close", syncPageScrollLock);
+  });
+  const observateur = new MutationObserver(syncPageScrollLock);
+  pageDialogs.forEach((dialogue) => {
+    observateur.observe(dialogue, { attributes: true, attributeFilter: ["open"] });
+  });
+  syncPageScrollLock();
+}
 
 const legalDialog = document.querySelector("#legal-dialog");
 const legalContent = legalDialog?.querySelector(".legal-dialog-content");
@@ -2334,6 +2436,32 @@ function renderWalkDialogDates(walkName) {
   });
 }
 
+/**
+ * Présentation d’une balade : l’accroche reste visible, la suite se déplie.
+ * Le texte complet n’est jamais tronqué dans le HTML, seulement replié.
+ */
+function updateWalkMoreControl() {
+  const article = walkArticles.find((item) => !item.hidden);
+  if (!walkMoreWrap || !walkMoreButton || !article) return;
+  const ouvert = article.dataset.walkExpanded === "true";
+  // Replié : le bouton n’apparaît que si le texte dépasse réellement la zone lisible.
+  const deborde = article.scrollHeight > article.clientHeight + 6;
+  walkMoreWrap.hidden = !ouvert && !deborde;
+  walkMoreButton.setAttribute("aria-expanded", ouvert ? "true" : "false");
+  walkMoreButton.innerHTML = ouvert
+    ? 'Réduire la présentation <span aria-hidden="true">↑</span>'
+    : 'Lire la suite <span aria-hidden="true">↓</span>';
+}
+
+function setWalkArticleExpanded(expanded) {
+  const article = walkArticles.find((item) => !item.hidden);
+  if (!article) return;
+  article.dataset.walkExpanded = expanded ? "true" : "false";
+  article.classList.toggle("is-collapsed", !expanded);
+  if (walkDialogContent) walkDialogContent.scrollTop = 0;
+  window.requestAnimationFrame(updateWalkMoreControl);
+}
+
 function openWalkDialog(walkName) {
   if (!walkDialog || !walkName) return;
   walkDialog.dataset.currentWalk = walkName;
@@ -2363,6 +2491,8 @@ function openWalkDialog(walkName) {
     }
   }
   if (walkDialogContent) walkDialogContent.scrollTop = 0;
+  // Chaque balade s’ouvre sur son accroche : la suite reste à portée d’un clic.
+  setWalkArticleExpanded(false);
   walkDialog.querySelector("[data-walk-close]")?.focus();
 }
 
@@ -2380,6 +2510,15 @@ walkDialog?.addEventListener("click", (event) => {
   if (event.target === walkDialog) closeWalkDialog();
 });
 walkDialog?.querySelector("[data-walk-close]")?.addEventListener("click", closeWalkDialog);
+
+walkMoreButton?.addEventListener("click", () => {
+  const article = walkArticles.find((item) => !item.hidden);
+  setWalkArticleExpanded(article?.dataset.walkExpanded !== "true");
+});
+
+window.addEventListener("resize", () => {
+  if (walkDialog?.open) updateWalkMoreControl();
+});
 
 document.addEventListener("click", (event) => {
   const trigger = event.target instanceof Element ? event.target.closest("[data-walk-open]") : null;

@@ -30,8 +30,8 @@
     <link rel="preconnect" href="https://script.google.com" crossorigin>
     <link rel="dns-prefetch" href="https://script.googleusercontent.com">
     <link rel="preload" as="image" imagesrcset="assets/responsive/hero-guide-480.webp 480w, assets/responsive/hero-guide-800.webp 800w, assets/responsive/hero-guide-1080.webp 1080w" imagesizes="(max-width: 760px) 94vw, (max-width: 980px) 52vw, 620px" type="image/webp">
-    <link rel="stylesheet" href="styles.css?v=ameliorations-20261021-32">
-    <script src="script.js?v=ameliorations-20261021-32" defer></script>
+    <link rel="stylesheet" href="styles.css?v=liens-google-20261021-42">
+    <script src="script.js?v=liens-google-20261021-42" defer></script>
     <noscript><style>
       .legal-dialog { position: static; display: block; width: auto; max-width: none; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
       .legal-dialog-frame { max-height: none; }
@@ -64,6 +64,7 @@
               <a href="balades.html#groupes">Groupes &amp; sur mesure</a>
             </div>
           </div>
+          <a href="faq.html">FAQ</a>
           <a href="infos-pratiques.html">Infos pratiques</a>
           <a class="nav-cta" href="contact.html">Me contacter <span aria-hidden="true">↗</span></a>
         </nav>
@@ -73,22 +74,24 @@
     <main id="main">
       <section class="hero section-shell" id="top" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title" class="hero-brand-heading">Balades culturelles</h1>
+          <div class="hero-brand">
+            <h1 id="hero-title" class="hero-brand-heading">Balades culturelles</h1>
+            <span class="hero-brand-logo" aria-hidden="true"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="" decoding="async"></span>
+          </div>
           <p class="hero-location">À Paris et en Île-de-France</p>
           <div class="hero-guide-badge">
             <strong class="hero-guide-name">Marie-Tiyi Jalon</strong>
             <span class="hero-guide-tagline">Animatrice culturelle et conteuse d’histoires</span>
           </div>
-          <p class="hero-lead">Des balades pour découvrir les quartiers, l’architecture et les histoires de Paris — et de l’Île-de-France — avec Marie-Tiyi Jalon.</p>
+          <p class="hero-lead">Des balades pour découvrir les quartiers, l’architecture et les histoires de Paris — et de l’Île-de-France — avec moi.</p>
         </div>
 
-        <div class="hero-visual">
-          <div class="hero-image-frame">
-            <picture class="hero-picture"><source type="image/webp" sizes="(max-width: 760px) 94vw, (max-width: 980px) 52vw, 620px" srcset="assets/responsive/hero-guide-480.webp 480w, assets/responsive/hero-guide-800.webp 800w, assets/responsive/hero-guide-1080.webp 1080w"><img src="assets/hero-guide.jpg" width="1080" height="1080" decoding="async" fetchpriority="high" alt="Marie-Tiyi Jalon, guide, présente un monument parisien à un groupe de promeneurs."></picture>
+          <div class="hero-visual">
+            <div class="hero-image-frame">
+              <picture class="hero-picture"><source type="image/webp" sizes="(max-width: 760px) 94vw, (max-width: 980px) 52vw, 620px" srcset="assets/responsive/hero-guide-480.webp 480w, assets/responsive/hero-guide-800.webp 800w, assets/responsive/hero-guide-1080.webp 1080w"><img src="assets/hero-guide.jpg" width="1080" height="1080" decoding="async" fetchpriority="high" alt="Marie-Tiyi Jalon, guide, présente un monument parisien à un groupe de promeneurs."></picture>
+            </div>
           </div>
-          <div class="hero-seal"><img src="assets/responsive/logo-128.png" width="128" height="128" alt="Logo Balades Culturelles, Paris – Île-de-France" decoding="async"></div>
-        </div>
-      </section>
+        </section>
 
 
       <div class="editorial-strip" aria-label="Repères des balades culturelles">
@@ -107,7 +110,6 @@
           <div class="home-invite-card">
             <span class="home-invite-mark" aria-hidden="true">✳</span>
             <p class="home-invite-text">Rejoignez-moi pour une balade guidée à la découverte des <em>trésors du patrimoine</em> et de la nature et de leurs <em>histoires secrètes.</em></p>
-            <a class="home-invite-link" href="balades.html#programme">Voir les prochaines dates <span aria-hidden="true">↘</span></a>
           </div>
         </div>
       </section>
@@ -222,42 +224,40 @@
             </button>
           </header>
           <div class="booking-dialog-body">
-            <form class="contact-form" id="contact-form" aria-labelledby="booking-form-title">
-              <div class="form-heading">
-                <span>Votre demande</span>
-                <span class="form-required-note"><b aria-hidden="true">*</b> Obligatoire</span>
-              </div>
-              <ol class="booking-steps" aria-label="Étapes du formulaire">
-                <li><span>01</span><b>Votre balade</b></li>
-                <li><span>02</span><b>La visite</b></li>
-                <li><span>03</span><b>Vos coordonnées</b></li>
-              </ol>
+            <form class="contact-form" id="contact-form" aria-labelledby="booking-dialog-title">
+              <p class="form-required-note"><b aria-hidden="true">*</b> Champs obligatoires</p>
 
               <fieldset class="form-step form-step-project">
                 <legend><span class="form-step-number">01</span> Votre balade</legend>
                 <label for="topic">Type de sortie
                   <select id="topic" name="topic">
-                    <option value="Je souhaite réserver une balade publique">Grand public · s’inscrire</option>
-                    <option value="Je souhaite réserver une place en balade seniors">Seniors · balade programmée</option>
-                    <option value="Je souhaite réserver une place en balade familles">Familles · balade programmée</option>
-                    <option value="Je souhaite organiser une visite pour un groupe de seniors">Seniors · visite sur demande</option>
-                    <option value="Je souhaite organiser une sortie pour une famille">Famille · visite sur demande</option>
-                    <option value="Je souhaite organiser une sortie scolaire">Écoles · sur demande</option>
-                    <option value="Je souhaite organiser une sortie privée ou de groupe">Groupe privé · sur demande</option>
-                    <option value="J’ai une autre question">Une autre question</option>
+                    <optgroup label="Balade programmée">
+                      <option value="Je souhaite réserver une balade publique">Grand public</option>
+                      <option value="Je souhaite réserver une place en balade seniors">Seniors</option>
+                      <option value="Je souhaite réserver une place en balade familles">Familles</option>
+                    </optgroup>
+                    <optgroup label="Sur demande">
+                      <option value="Je souhaite organiser une visite pour un groupe de seniors">Groupe de seniors</option>
+                      <option value="Je souhaite organiser une sortie pour une famille">Famille</option>
+                      <option value="Je souhaite organiser une sortie scolaire">École</option>
+                      <option value="Je souhaite organiser une sortie privée ou de groupe">Groupe privé</option>
+                    </optgroup>
+                    <optgroup label="Autre">
+                      <option value="J’ai une autre question">Une question</option>
+                    </optgroup>
                   </select>
                 </label>
               </fieldset>
 
               <fieldset class="form-step form-step-visit">
-                <legend><span class="form-step-number">02</span> Votre visite et votre groupe</legend>
+                <legend><span class="form-step-number">02</span> Votre visite</legend>
                 <div class="form-row form-row-booking">
                   <label for="session" id="public-session-field"><span class="field-name">Balade et date <b aria-hidden="true">*</b></span><select id="session" name="session" required disabled><option value="">Chargement des dates…</option></select></label>
                 </div>
                 <input id="participants" name="participants" type="hidden" value="0" disabled>
                 <fieldset class="age-groups" id="age-groups">
                   <legend>Nombre de personnes par tarif</legend>
-                  <p class="age-groups-intro">Indiquez uniquement les quantités : aucun nom ni âge exact n’est demandé.</p>
+                  <p class="age-groups-intro">Indiquez seulement les quantités : aucun nom d’enfant n’est demandé.</p>
                   <div class="age-group-grid">
                     <label for="age-standard"><span>Plein tarif</span><small>26 ans et plus · 15&nbsp;€</small><input id="age-standard" name="age_standard" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="standard"></label>
                     <label for="age-youth"><span>Jeunes de 15 à 25 ans</span><small>10&nbsp;€</small><input id="age-youth" name="age_youth" type="number" min="0" max="25" step="1" inputmode="numeric" value="0" data-age-group="youth"></label>
@@ -268,15 +268,15 @@
                     <p><span>Total de participants</span><output id="participants-total" for="age-standard age-youth age-child age-under-five">0</output></p>
                     <p><span>Montant estimé</span><output id="booking-estimate" for="age-standard age-youth age-child age-under-five">—</output></p>
                   </div>
-                  <p class="age-group-status" id="age-group-status" role="status" aria-live="polite">Le total inclut les enfants gratuits et reste limité aux places de la séance : 25 pour le tout public, 20 pour les seniors et les familles.</p>
+                  <p class="age-group-status" id="age-group-status" role="status" aria-live="polite">Les moins de 5 ans sont comptés dans le total.</p>
                 </fieldset>
                 <div class="form-row form-row-booking custom-booking-fields" id="custom-booking-fields" hidden>
                   <label for="date">Date souhaitée <span class="optional">(facultatif)</span><input id="date" name="date" type="date"></label>
                   <label for="slot">Créneau souhaité <span class="optional">(facultatif)</span><select id="slot" name="slot"><option>À convenir</option><option>10 h 30–12 h</option></select></label>
                   <label for="custom-participants">Nombre de personnes estimé <span class="optional">(facultatif)</span><input id="custom-participants" name="custom_participants" type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="Ex. 12" aria-describedby="custom-capacity-note"></label>
                 </div>
-                <p class="booking-capacity-note custom-capacity-note" id="custom-capacity-note" role="status" aria-live="polite">Indiquez le nombre de personnes&nbsp;: 20 personnes maximum pour un groupe de seniors ou une famille.</p>
-                <p class="booking-capacity-note" id="session-status" role="status" aria-live="polite">Sélectionnez une balade et une date pour consulter les places disponibles.</p>
+                <p class="booking-capacity-note custom-capacity-note" id="custom-capacity-note" role="status" aria-live="polite">20 personnes maximum.</p>
+                <p class="booking-capacity-note" id="session-status" role="status" aria-live="polite">Choisissez une balade et une date pour voir les places.</p>
               </fieldset>
 
               <fieldset class="form-step form-step-contact">
@@ -295,10 +295,6 @@
               </fieldset>
 
               <p class="booking-recap" id="booking-recap" role="status" aria-live="polite" hidden></p>
-              <div class="form-bottom">
-                <button class="button button-submit" type="submit" id="submit-booking">Réserver ma place <span class="button-arrow" aria-hidden="true">↗</span></button>
-                <p class="form-hint">Pour une balade programmée (tout public, seniors, familles), la confirmation et sa référence s’affichent ici si des places sont disponibles, et un e-mail de confirmation part aussitôt vers votre adresse. Pour une demande sur mesure (groupe de seniors, écoles, groupe privé), votre demande est envoyée directement à Marie-Tiyi et vous recevez un e-mail récapitulatif.</p>
-              </div>
               <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
               <div class="booking-calendar" id="booking-calendar" hidden>
                 <p class="booking-calendar-label">Gardez la date</p>
@@ -307,7 +303,11 @@
                   Ajouter à mon agenda <span aria-hidden="true">↓</span>
                 </a>
               </div>
-              <p class="privacy-note">Vos informations servent à traiter cette demande. <a href="#legal-confidentialite" data-legal-open="confidentialite">Consulter la notice de confidentialité</a>.</p>
+              <p class="privacy-note">Vos informations servent uniquement à traiter cette demande. <a href="#legal-confidentialite" data-legal-open="confidentialite">Notice de confidentialité</a></p>
+              <div class="form-bottom">
+                <button class="button button-submit" type="submit" id="submit-booking">Réserver ma place <span class="button-arrow" aria-hidden="true">↗</span></button>
+                <p class="form-hint">Confirmation immédiate par e-mail s’il reste des places. Sinon, Marie-Tiyi vous répond personnellement.</p>
+              </div>
             </form>
           </div>
         </div>
@@ -327,35 +327,103 @@
             <nav class="legal-dialog-rail" aria-label="Sommaire des informations juridiques">
               <a class="legal-rail-link" href="#legal-mentions" data-legal-jump="mentions">Mentions légales</a>
               <a class="legal-rail-link" href="#legal-confidentialite" data-legal-jump="confidentialite">Confidentialité &amp; données personnelles</a>
-              <p class="legal-rail-status"><span>Version de travail</span>Identité, hébergement et durées de conservation restent à valider avant publication.</p>
+              <p class="legal-rail-status"><span>Version de travail</span>Forme juridique, adresse et SIRET restent à valider avant publication.</p>
             </nav>
             <div class="legal-dialog-content">
               <article class="legal-article" id="legal-mentions" data-legal-article="mentions">
+                
                 <h3>Mentions légales</h3>
                 <p class="legal-draft-notice"><strong>À confirmer avant publication :</strong> d’après les informations transmises, l’identité indiquée est « MADAME MARIE-TIYI JALON », SIREN 894 639 921, à Asnières-sur-Seine (92600). La forme juridique exacte, l’adresse complète, le SIRET de l’établissement et l’hébergeur restent à vérifier. Le site reste en mode non indexable tant que les mentions ne sont pas complètes.</p>
-                <h4>Éditeur du site</h4>
-                <p><strong>Nom commercial :</strong> Balades Culturelles<br><strong>Éditrice et directrice de la publication :</strong> Marie-Tiyi Jalon<br><strong>Identité juridique communiquée :</strong> MADAME MARIE-TIYI JALON<br><strong>SIREN communiqué :</strong> 894 639 921<br><strong>Commune communiquée :</strong> Asnières-sur-Seine (92600)<br><strong>Contact :</strong> <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> · <a href="tel:+33601740449">06 01 74 04 49</a></p>
+                <details class="legal-section" open>
+                  <summary><span class="legal-section-title">Éditeur du site</span></summary>
+                  <div class="legal-section-body">
+                    <p><strong>Nom commercial :</strong> Balades Culturelles<br><strong>Éditrice et directrice de la publication :</strong> Marie-Tiyi Jalon<br><strong>Identité juridique communiquée :</strong> MADAME MARIE-TIYI JALON<br><strong>SIREN communiqué :</strong> 894 639 921<br><strong>Commune communiquée :</strong> Asnières-sur-Seine (92600)<br><strong>Contact :</strong> <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> · <a href="tel:+33601740449">06 01 74 04 49</a></p>
                 <p><strong>À confirmer :</strong> forme juridique exacte, adresse professionnelle complète à publier, SIRET de l’établissement et, si applicable, mentions d’immatriculation au RCS ou au répertoire des métiers.</p>
-                <h4>Hébergement</h4>
-                <p>Le nom légal, l’adresse et les coordonnées de l’hébergeur devront être renseignés une fois l’hébergement de production et le domaine choisis. La prévisualisation locale n’est pas l’hébergement public du site.</p>
-                <h4>Propriété intellectuelle</h4>
-                <p>Les contenus et visuels du site ne peuvent être réutilisés sans autorisation. Les illustrations générées sont des visuels d’ambiance et ne constituent pas des photographies documentaires des lieux.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Hébergement</span></summary>
+                  <div class="legal-section-body">
+                    <p>Le site public est actuellement hébergé par <strong>GitHub, Inc.</strong> (service GitHub Pages), 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis. Cette mention devra être confirmée ou remplacée si l’hébergement ou le nom de domaine change.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Propriété intellectuelle</span></summary>
+                  <div class="legal-section-body">
+                    <p>Les contenus et visuels du site ne peuvent être réutilisés sans autorisation. Les illustrations générées sont des visuels d’ambiance et ne constituent pas des photographies documentaires des lieux.</p>
+                  </div>
+                </details>
               </article>
-              <article class="legal-article" id="legal-confidentialite" data-legal-article="confidentialite">
+                            <article class="legal-article" id="legal-confidentialite" data-legal-article="confidentialite">
+                
                 <h3>Confidentialité &amp; données personnelles</h3>
-                <p class="legal-draft-notice"><strong>Notice préparatoire RGPD :</strong> l’identité et le SIREN indiqués proviennent des informations transmises par l’éditrice. La forme juridique, l’adresse complète, l’hébergement et les durées de conservation doivent encore être confirmés avant mise en ligne. Cette notice ne remplace pas une validation juridique.</p>
-                <h4>Responsable et contact</h4>
-                <p>Le responsable du traitement est Marie-Tiyi Jalon, pour Balades Culturelles (identité juridique communiquée : MADAME MARIE-TIYI JALON, SIREN 894 639 921). Pour toute question ou demande relative à vos données : <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> ou <a href="tel:+33601740449">06 01 74 04 49</a>. La forme juridique exacte et l’adresse professionnelle complète restent à préciser dans les mentions légales.</p>
-                <h4>Données et finalités</h4>
-                <p>Le site recueille le prénom, le nom, l’adresse e-mail et le numéro de téléphone (ces quatre champs sont obligatoires pour une réservation), la balade et la date choisies, le nombre de personnes par tranche tarifaire, ainsi que les précisions que vous ajoutez. Ces informations servent à répondre aux demandes, gérer les réservations, vous transmettre le lieu de rendez-vous ou vous prévenir d’un changement, et vérifier le nombre de places. Les coordonnées des personnes ayant réservé sont également conservées dans un carnet d’adresses privé (Google Sheets), accessible à la seule éditrice, afin d’éviter les doublons et de préparer les visites. Aucun nom ni âge exact des enfants n’est demandé. Aucun paiement en ligne ni prospection commerciale automatisée n’est effectué par le site.</p>
-                <h4>Base légale et destinataires</h4>
-                <p>Le traitement d’une réservation ou d’un devis demandé repose sur les mesures précontractuelles et, le cas échéant, l’exécution du contrat (article 6, paragraphe 1, point b du RGPD). Les données sont accessibles à Marie-Tiyi Jalon et aux prestataires techniques strictement nécessaires. Si la version Google est déployée, Google Apps Script et Google Sheets interviendront selon les paramètres du compte propriétaire; l’hébergement, les éventuels transferts et les garanties contractuelles devront être vérifiés avant publication. Aucune prospection commerciale automatisée n’est effectuée.</p>
-                <h4>Conservation</h4>
-                <p>Les durées exactes doivent être fixées avant publication : demandes sans réservation, réservations et éventuels justificatifs comptables doivent être distingués. Les données ne doivent pas être conservées plus longtemps que nécessaire, sous réserve des obligations légales applicables.</p>
-                <h4>Vos droits</h4>
-                <p>Vous pouvez demander l’accès à vos données, leur rectification ou leur effacement, la limitation du traitement et, lorsque les conditions légales sont réunies, leur portabilité ou vous opposer au traitement. Vous pouvez également adresser une réclamation à la <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">CNIL</a>. Les champs indispensables à une réservation sont nécessaires pour la traiter.</p>
-                <h4>Cookies et décisions automatisées</h4>
-                <p>Aucun outil de publicité ou de mesure d’audience n’est intégré au site à ce jour. Ce point devra être revérifié après le choix de l’hébergement. Le système vérifie automatiquement les places disponibles, mais ne réalise ni profilage ni décision automatisée concernant les personnes.</p>
+                <p class="legal-draft-notice"><strong>Notice à valider avant publication :</strong> les finalités, destinataires et durées ci-dessous décrivent le fonctionnement actuel du site. Restent à confirmer&nbsp;: la forme juridique exacte, l’adresse professionnelle complète, l’identité de l’hébergeur définitif et les durées de conservation définitives. Cette notice ne remplace pas une validation juridique.</p>
+                <details class="legal-section" open>
+                  <summary><span class="legal-section-title">Responsable du traitement</span></summary>
+                  <div class="legal-section-body">
+                    <p>Le responsable du traitement est <strong>Marie-Tiyi Jalon</strong>, pour Balades Culturelles (identité juridique communiquée&nbsp;: MADAME MARIE-TIYI JALON, SIREN 894 639 921, Asnières-sur-Seine). Pour toute question ou demande relative à vos données&nbsp;: <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> ou <a href="tel:+33601740449">06&nbsp;01&nbsp;74&nbsp;04&nbsp;49</a>. Aucun délégué à la protection des données n’a été désigné&nbsp;: les demandes sont traitées directement par l’éditrice.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Données collectées</span></summary>
+                  <div class="legal-section-body">
+                    <p>Lors d’une réservation ou d’une demande, le site recueille le prénom, le nom, l’adresse e-mail et le numéro de téléphone (ces quatre champs sont obligatoires pour une réservation), la balade et la date choisies, le nombre de personnes par tranche tarifaire, ainsi que les précisions que vous ajoutez librement. La date et l’heure de la demande sont enregistrées. Aucun nom, âge exact, donnée de santé ou information sensible concernant les enfants n’est demandé. Aucune donnée bancaire n’est collectée ni conservée&nbsp;: aucun paiement n’est traité en ligne par le site. Les données techniques de connexion (adresse IP, horodatage, type de navigateur) sont traitées par l’hébergeur et par les services Google décrits ci-dessous, pour la seule fourniture du service et sa sécurité.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Finalités et bases légales</span></summary>
+                  <div class="legal-section-body">
+                    <p>Les données servent à répondre à vos demandes, gérer les réservations et vérifier le nombre de places disponibles, vous transmettre le lieu de rendez-vous, vous prévenir d’un changement ou d’une annulation, et tenir la comptabilité. Ces traitements reposent sur les mesures précontractuelles et l’exécution du contrat (article 6, paragraphe 1, point b du RGPD) et, pour la tenue des justificatifs comptables, sur l’obligation légale (point c). La sécurité du site et la prévention des envois frauduleux reposent sur l’intérêt légitime (point f). Aucune prospection commerciale n’est effectuée, aucune donnée n’est vendue et aucun profilage ni décision automatisée n’est réalisé&nbsp;: la vérification des places disponibles est un simple calcul de capacité.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Destinataires</span></summary>
+                  <div class="legal-section-body">
+                    <p>Les données sont accessibles à Marie-Tiyi Jalon et aux prestataires techniques strictement nécessaires&nbsp;: <strong>Google Ireland Limited / Google LLC</strong> pour Google Apps Script, Google Sheets, Google Drive, Google Agenda et Gmail (enregistrement des réservations, envoi des e-mails de confirmation, carnet d’adresses privé réservé à l’éditrice), et <strong>GitHub, Inc.</strong> pour l’hébergement du site public (GitHub Pages). Aucun autre destinataire ne reçoit vos données.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Transferts hors Union européenne</span></summary>
+                  <div class="legal-section-body">
+                    <p>Google et GitHub étant établis aux États-Unis, vos données peuvent y être transférées ou y transiter. Ces transferts s’appuient sur le cadre de protection des données UE–États-Unis (<em>EU-US Data Privacy Framework</em>) et, à défaut, sur les clauses contractuelles types de la Commission européenne. Les paramètres de localisation des données du compte Google utilisé et les garanties contractuelles de l’hébergeur définitif devront être vérifiés et documentés avant publication.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Durées de conservation</span></summary>
+                  <div class="legal-section-body">
+                    <p>Les demandes qui n’aboutissent pas à une réservation sont conservées trois ans à compter du dernier contact. Les réservations (nom, coordonnées, balade, date) sont conservées trois ans après la date de la balade, afin de gérer les réclamations et de justifier la prestation. Les pièces comptables sont conservées dix ans conformément à l’obligation légale. Le carnet d’adresses privé suit la même durée que la réservation correspondante. Au-delà de ces durées, les données sont supprimées.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Cookies et traceurs</span></summary>
+                  <div class="legal-section-body">
+                    <p><strong>Le site n’utilise aucun cookie.</strong> Aucun outil de mesure d’audience, aucun pixel publicitaire et aucun contenu tiers embarqué (vidéo, carte, réseau social) n’y est intégré&nbsp;: les liens vers Instagram et Facebook sont de simples liens, et aucune donnée n’est transmise à ces réseaux avant un clic. Un espace de stockage de session du navigateur (<em>sessionStorage</em>) est utilisé uniquement pour éviter qu’une même réservation soit envoyée deux fois&nbsp;: il ne contient aucune donnée de suivi, il est effacé à la fermeture de l’onglet et il ne constitue pas un traceur publicitaire. Aucun consentement préalable n’est donc requis et aucun bandeau cookies n’est affiché&nbsp;; si un outil de mesure d’audience ou un contenu tiers était ajouté, un dispositif de consentement serait mis en place.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Vos droits</span></summary>
+                  <div class="legal-section-body">
+                    <p>Vous pouvez demander l’accès à vos données, leur rectification ou leur effacement, la limitation du traitement, vous opposer au traitement et, lorsque les conditions légales sont réunies, obtenir leur portabilité. Vous pouvez également définir des directives relatives au sort de vos données après votre décès. Ces droits s’exercent par e-mail à <a href="mailto:balades.culturelles@gmail.com">balades.culturelles@gmail.com</a> ou par téléphone au <a href="tel:+33601740449">06&nbsp;01&nbsp;74&nbsp;04&nbsp;49</a>&nbsp;; une réponse vous sera apportée dans un délai d’un mois. Les champs indispensables à une réservation sont nécessaires pour la traiter&nbsp;: sans eux, la réservation ne peut pas être enregistrée. Si vous estimez, après nous avoir contactés, que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">CNIL</a> (3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07).</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Sécurité</span></summary>
+                  <div class="legal-section-body">
+                    <p>Le site public est servi en HTTPS. L’accès aux réservations est limité à l’éditrice et protégé par les mécanismes d’authentification du compte Google qui les héberge&nbsp;; la validation en deux étapes de ce compte est indispensable. Aucun paiement n’étant traité en ligne, aucune donnée bancaire ne circule sur le site. Les échanges par e-mail n’étant jamais totalement sécurisés, il est recommandé de ne pas transmettre de données sensibles par ce canal.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Mineurs</span></summary>
+                  <div class="legal-section-body">
+                    <p>Les réservations concernant des enfants sont effectuées par un adulte responsable, qui fournit ses propres coordonnées. Seul le nombre de participants par tranche d’âge est enregistré&nbsp;: aucune donnée propre à un enfant n’est collectée.</p>
+                  </div>
+                </details>
+                <details class="legal-section">
+                  <summary><span class="legal-section-title">Évolution de cette notice</span></summary>
+                  <div class="legal-section-body">
+                    <p>Cette notice peut être mise à jour pour tenir compte d’un changement de prestataire, d’hébergement ou de réglementation. La version en ligne au moment de votre réservation est celle qui s’applique.</p>
+                  </div>
+                </details>
               </article>
             </div>
           </div>
