@@ -869,8 +869,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .program-grid {
   display: none !important;
 }
-.price-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(36,42,35,.12); color: var(--muted); font-size: 10px; }
-.price-list li strong { color: var(--forest); font-family: var(--serif); font-size: 16px; font-weight: 600; white-space: nowrap; }
+.price-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(36,42,35,.12); color: var(--muted); font-size: 10px; }
+.price-list li strong { margin-left: auto; color: var(--forest); font-family: var(--serif); font-size: 16px; font-weight: 600; text-align: right; white-space: nowrap; }
+/* Sous la valeur (durée, horaires) : précision discrète, alignée comme la valeur.
+   white-space: normal permet de replier les horaires en tout dernier recours. */
+.price-list li strong small { display: block; margin-top: 2px; color: var(--muted); font-family: var(--sans); font-size: 9.5px; font-weight: 500; white-space: normal; }
 /* Précision sous la grille tarifaire : le montant est rappelé dans l’e-mail de
    confirmation. Spécificité > « .practical-card > p » pour garder cette taille. */
 .practical-price .price-note { margin: 13px 0 0; padding-top: 11px; border-top: 1px solid rgba(36,42,35,.12); color: var(--muted); font-size: 10px; font-style: italic; line-height: 1.65; }
@@ -878,7 +881,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .practical-card > a span { color: var(--clay); font-size: 14px; }
 /* La page « Infos pratiques » n'a qu'un titre : les cartes suivent directement. */
 .practical-compact { padding-top: clamp(6px, 1.2vw, 16px); }
-.practical-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(36,42,35,.14); }
+/* 230 px min : en dessous, trois colonnes feraient se chevaucher libellés et
+   valeurs (« Balades tout public » + « 1 h 30 (de 10 h 30 à 11 h 45) » ≈ 210 px). */
+.practical-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 24px; padding-top: 22px; border-top: 1px solid rgba(36,42,35,.14); }
 .practical-methods > div { padding-left: 13px; border-left: 2px solid var(--clay); }
 .practical-methods strong { display: block; color: var(--forest); font-family: var(--serif); font-size: 15px; font-weight: 600; }
 .practical-methods p { margin: 5px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.6; }
@@ -1178,6 +1183,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .guide-quote { font-size: 17px; }
   .practical-grid { grid-template-columns: 1fr; }
   .practical-methods { grid-template-columns: 1fr; gap: 12px; }
+  .price-list li strong small { font-size: 10px; }
   .practical-card:first-child { grid-row: auto; }
   .practical-card { min-height: auto; padding: 21px; }
   .contact-section { padding-block: 68px; }
